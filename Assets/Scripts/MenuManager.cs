@@ -3,6 +3,9 @@ using UnityEngine.SceneManagement;
 
 public class MenuManager : MonoBehaviour
 {
+    //Cargar el UI Manager
+    public GameObject UIManager;
+
     public void Awake()
     {
         Time.timeScale = 1f; // Asegúrate de que el tiempo está restaurado al cargar la escena
@@ -10,7 +13,7 @@ public class MenuManager : MonoBehaviour
 
     public void StartGame()
     {
-        SceneManager.LoadScene("GameScene"); // Cambia "MainScene" por el nombre de tu escena principal
+        UIManager.SetActive(true);
     }
 
     public void QuitGame()
