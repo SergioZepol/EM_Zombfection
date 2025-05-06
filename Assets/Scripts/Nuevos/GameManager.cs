@@ -7,7 +7,7 @@ public class GameManager : NetworkBehaviour
     #region Variables
 
     // Referencia al NetworkManager
-    NetworkManager _networkManager;
+    public NetworkManager _networkManager;
 
     // Prefabricado del coche
     GameObject _human;
@@ -35,7 +35,7 @@ public class GameManager : NetworkBehaviour
     void Start()
     {
         // Cacheo del NetworkManager
-        _networkManager = NetworkManager.Singleton;
+        //_networkManager = NetworkManager.Singleton;
 
         // El humano va a ser de entre la lista de prefabs al jugador
         _human = _networkManager.NetworkConfig.Prefabs.Prefabs[0].Prefab;
@@ -77,6 +77,7 @@ public class GameManager : NetworkBehaviour
     private void onClientConnected(ulong obj)
     {
         // Solo si eres el servidor decides instanciar a los clientes
+        Debug.Log("!IsServer: Clientes conectados: " + clientes.Value);
         if (_networkManager.IsServer)
         {
             clientes.Value += 1;
@@ -91,32 +92,6 @@ public class GameManager : NetworkBehaviour
             Player player = playerObject.GetComponent<Player>();
             player.ID = obj;
             */
-
-            // Selección de circuito basado en NetVariable
-
-            // Posiciones de inicio/spawn de los jugadores en pista
-            startPos1 = GameObject.FindGameObjectWithTag("Pos1");
-            startPos2 = GameObject.FindGameObjectWithTag("Pos2");
-            startPos3 = GameObject.FindGameObjectWithTag("Pos3");
-            startPos4 = GameObject.FindGameObjectWithTag("Pos4");
-
-            // Dependiendo de qué cliente sea, se establece una posición distinta
-            switch (clientes.Value)
-            {
-                case 1:
-                    startPos = startPos1;
-                    break;
-                case 2:
-                    startPos = startPos2;
-                    break;
-                case 3:
-                    startPos = startPos3;
-                    break;
-                default:
-                    startPos = startPos4;
-                    break;
-            };
-            playerObject.transform.position = startPos.GetComponent<Transform>().transform.position;
         }
     }
 
