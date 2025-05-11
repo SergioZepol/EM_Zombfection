@@ -115,6 +115,33 @@ public class GameManager : NetworkBehaviour
         }
     }
 
+    public override void OnNetworkSpawn()
+    {
+        if (!IsServer && IsOwner) 
+        {
+            TestServerRpc(0, NetworkObjectId);
+        }
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    void TestClientRpc(int value, ulong sourceNetworkObjectId)
+    {
+        Debug.Log($"El cliente recibe el RPC #{value} en NetworkObject #{sourceNetworkObjectId}");
+        if (IsOwner) 
+        {
+            TestServerRpc(value + 1, sourceNetworkObjectId);
+        }
+    }
+
+    [Rpc(SendTo.Server)]
+    void TestServerRpc(int value, ulong sourceNetworkObjectId)
+    {
+        Debug.Log($"El server recibe el RPC #{value} en NetworkObject #{sourceNetworkObjectId}");
+        TestClientRpc(value, sourceNetworkObjectId);
+    }
+
+
+
     #endregion
 
     #region Métodos Públicos
@@ -132,6 +159,7 @@ public class GameManager : NetworkBehaviour
     // Devuelve el número de clientes conectados
     public int GetClients()
     {
+        print($"Hay {clientes} clientes conectados");
         return clientes.Value;
     }
 
