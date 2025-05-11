@@ -33,9 +33,24 @@ public class UIManager : MonoBehaviour
 
     void StartButtons()
     {
-        if (GUILayout.Button("Host")) _NetworkManager.StartHost();
-        if (GUILayout.Button("Client")) _NetworkManager.StartClient();
-        if (GUILayout.Button("Server")) _NetworkManager.StartServer();
+        if (GUILayout.Button("Host")) StartHost();
+        if (GUILayout.Button("Client")) StartClient();
+        if (GUILayout.Button("Server")) StartServer();
+    }
+
+    void StartHost()
+    {
+        NetworkManager.Singleton.StartHost();
+    }
+
+    void StartClient()
+    {
+        NetworkManager.Singleton.StartClient();
+    }
+
+    void StartServer()
+    {
+        NetworkManager.Singleton.StartServer();
     }
 
     void StatusLabels()
