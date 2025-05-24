@@ -15,6 +15,20 @@ public class UIManager : MonoBehaviour
     int maxConnections = 4;
     string joinCode = null;
 
+    public static UIManager Instance { get; private set; }
+
+    void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(this.gameObject); // Evita duplicados
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(this.gameObject); // Persiste entre escenas
+    }
+
     void OnGUI()
     {
         int width = 300;
@@ -30,7 +44,10 @@ public class UIManager : MonoBehaviour
         else
         {
             StatusLabels();
-            SceneManager.LoadScene("GameScene"); // Cambia "MainScene" por el nombre de tu escena principal
+            if (SceneManager.GetActiveScene().name != "GameScene")
+            {
+                SceneManager.LoadScene("GameScene");
+            }
         }
 
         GUILayout.EndArea();
@@ -85,5 +102,6 @@ public class UIManager : MonoBehaviour
         GUILayout.Label("Transport: " +
             _NetworkManager.NetworkConfig.NetworkTransport.GetType().Name);
         GUILayout.Label("Mode: " + mode);
+        GUILayout.Label("Join code: " + joinCode);
     }
 }
