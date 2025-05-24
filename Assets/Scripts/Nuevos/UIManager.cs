@@ -12,6 +12,8 @@ public class UIManager : MonoBehaviour
 {
     [SerializeField]
     NetworkManager _NetworkManager;
+    int maxConnections = 4;
+    string joinCode = null;
 
     void OnGUI()
     {
@@ -39,13 +41,6 @@ public class UIManager : MonoBehaviour
         if (GUILayout.Button("Host")) StartHost();
         if (GUILayout.Button("Client")) StartClient();
     }
-
-    void StartHost()
-    {
-        NetworkManager.Singleton.StartHost();
-    }
-
-    /*
         private async void StartHost()
     {
         await UnityServices.InitializeAsync();
@@ -66,14 +61,8 @@ public class UIManager : MonoBehaviour
 
         NetworkManager.Singleton.StartHost();
     }
-     */
 
-    void StartClient()
-    {
-        NetworkManager.Singleton.StartClient();
-    }
 
-    /*
         private async void StartClient()
     {
         await UnityServices.InitializeAsync();
@@ -86,7 +75,7 @@ public class UIManager : MonoBehaviour
         NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(joinAllocation, "dtls"));
         NetworkManager.Singleton.StartClient();
     }
-    */
+    
 
     void StatusLabels()
     {
