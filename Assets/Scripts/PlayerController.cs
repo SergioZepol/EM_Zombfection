@@ -1,10 +1,15 @@
 using TMPro;
 using UnityEngine;
+using Unity.Netcode;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : NetworkBehaviour
 {
     private TextMeshProUGUI coinText;
-
+    /*
+    public NetworkVariable<int> CoinsCollected = new NetworkVariable<int>();
+    public NetworkVariable<bool> isZombie = new NetworkVariable<bool>();
+    public NetworkVariable<FixedString64Bytes> uniqueID = new NetworkVariable<FixedString64Bytes>();
+    */
     [Header("Stats")]
     public int CoinsCollected = 0;
 
@@ -23,8 +28,35 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        if (!IsOwner)
+        {
+            enabled = false;
+            return;
+        }
+
+        // Sincronizar la camara
+
+        if (IsOwner)
+        {
+            Camera mainCam = Camera.main;
+            if (mainCam != null)
+            {
+                CameraController camController = mainCam.GetComponent<CameraController>();
+                if (camController != null)
+                {
+                    camController.player = this.transform;
+                    camController.enabled = true;
+                }
+            }
+        }
+
         // Buscar el objeto "CanvasPlayer" en la escena
         GameObject canvas = GameObject.Find("CanvasPlayer");
+
+        if (!IsOwner && canvas != null)
+        {
+            canvas.SetActive(false); // Oculta el HUD a los demás jugadores
+        }
 
         if (canvas != null)
         {
@@ -48,6 +80,9 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+
+        if (!IsOwner) return;
+
         // Leer entrada del teclado
         horizontalInput = Input.GetAxis("Horizontal");
         verticalInput = Input.GetAxis("Vertical");
@@ -93,6 +128,7 @@ public class PlayerController : MonoBehaviour
         if (!isZombie) // Solo los humanos pueden recoger monedas
         {
             this.CoinsCollected++;
+            //CoinsCollected.Value++;
             UpdateCoinUI();
         }
     }

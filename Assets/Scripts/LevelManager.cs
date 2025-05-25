@@ -359,7 +359,6 @@ public class LevelManager : MonoBehaviour
             Debug.LogError("Faltan referencias al prefab o al punto de aparición.");
         }
     }
-
     private void SpawnTeams()
     {
         Debug.Log("Instanciando equipos");
