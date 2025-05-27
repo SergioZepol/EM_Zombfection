@@ -10,10 +10,12 @@ using UnityEngine.SceneManagement;
 
 public class UIManager : MonoBehaviour
 {
-    [SerializeField]
-    NetworkManager _NetworkManager;
+    //[SerializeField]
+    //NetworkManager _NetworkManager;
     int maxConnections = 4;
-    string joinCode = null;
+    string joinCode = "Enter room code...";
+    public string joinName = "Player Name...";
+    public bool mostrarBox = true;
 
     public static UIManager Instance { get; private set; }
 
@@ -31,23 +33,32 @@ public class UIManager : MonoBehaviour
 
     void OnGUI()
     {
-        int width = 300;
-        int height = 300;
-        int x = (Screen.width - width) / 2 + 50;
-        int y = (Screen.height - height) / 2;
+        float screenWidth = Screen.width;
+        float screenHeight = Screen.height;
+        float areaWidth = 300;
+        float areaHeight = 300;
 
-        GUILayout.BeginArea(new Rect(x, y, width, height));
-        if (!_NetworkManager.IsClient && !_NetworkManager.IsServer)
+        Rect areaGUImenu = new Rect((screenWidth - areaWidth) / 2 + 50, (screenHeight - areaHeight) / 2, areaWidth, areaHeight);
+        Rect areaGUI = new Rect(10, 10, areaWidth, areaHeight);
+
+        // Puedes usar esto si quieres controlar cuándo se muestra el box (igual que en el segundo código)
+        bool mostrarBox = !NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer;
+
+        if (mostrarBox)
+        {
+            GUI.Box(areaGUImenu, "Menú");
+        }
+
+        GUILayout.BeginArea(mostrarBox ? areaGUImenu : areaGUI);
+        GUILayout.Space(mostrarBox ? 40 : 0); // Añade espacio si es el menú
+        if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
         {
             StartButtons();
         }
         else
         {
+            mostrarBox = false;
             StatusLabels();
-            if (SceneManager.GetActiveScene().name != "GameScene")
-            {
-                SceneManager.LoadScene("GameScene");
-            }
         }
 
         GUILayout.EndArea();
@@ -57,6 +68,11 @@ public class UIManager : MonoBehaviour
     {
         if (GUILayout.Button("Host")) StartHost();
         if (GUILayout.Button("Client")) StartClient();
+
+        // Campos de texto para código y nombre
+        joinCode = GUILayout.TextField(joinCode);
+        joinName = GUILayout.TextField(joinName);
+
     }
         private async void StartHost()
     {
@@ -77,6 +93,8 @@ public class UIManager : MonoBehaviour
         te.Copy();
 
         NetworkManager.Singleton.StartHost();
+
+        NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
     }
 
 
@@ -96,11 +114,10 @@ public class UIManager : MonoBehaviour
 
     void StatusLabels()
     {
-        var mode = _NetworkManager.IsHost ?
-            "Host" : _NetworkManager.IsServer ? "Server" : "Client";
+        var mode = NetworkManager.Singleton.IsHost ?
+            "Host" : NetworkManager.Singleton.IsServer ? "Server" : "Client";
 
-        GUILayout.Label("Transport: " +
-            _NetworkManager.NetworkConfig.NetworkTransport.GetType().Name);
+        GUILayout.Label("Transport: " + NetworkManager.Singleton.NetworkConfig.NetworkTransport.GetType().Name);
         GUILayout.Label("Mode: " + mode);
         GUILayout.Label("Join code: " + joinCode);
     }

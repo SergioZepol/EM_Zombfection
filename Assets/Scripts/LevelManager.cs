@@ -119,7 +119,7 @@ public class LevelManager : MonoBehaviour
             CoinsGenerated = levelBuilder.GetCoinsGenerated();
         }
 
-        SpawnTeams();
+        // SpawnTeams(); //genera personajes en local (base)
         
         UpdateTeamUI();
     }

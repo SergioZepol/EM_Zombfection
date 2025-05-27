@@ -1,5 +1,7 @@
 using UnityEngine;
 using Unity.Netcode;
+using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 //using Cinemachine;
 
 public class GameManager : NetworkBehaviour
@@ -9,8 +11,9 @@ public class GameManager : NetworkBehaviour
     // Referencia al NetworkManager
     public NetworkManager _networkManager;
 
-    // Prefabricado del coche
-    GameObject _human;
+    // Prefabricado del personaje
+    [SerializeField] private GameObject _human;
+    //private int nextSpawnIndex = 0;
 
     // Contador de clientes conectados
     public NetworkVariable<int> clientes = new NetworkVariable<int>();
@@ -44,6 +47,11 @@ public class GameManager : NetworkBehaviour
         _networkManager.OnServerStarted += onServerStarted;
         _networkManager.OnClientConnectedCallback += onClientConnected;
         _networkManager.OnClientDisconnectCallback += onClientDisconnect;
+
+        if (NetworkManager.Singleton.IsServer)
+        {
+            NetworkManager.Singleton.SceneManager.OnLoadComplete += OnClientFinishedLoadingScene;
+        }
     }
 
     void Awake()
@@ -84,15 +92,55 @@ public class GameManager : NetworkBehaviour
             Debug.Log("Clientes conectados: " + clientes.Value);
 
             // Spawn del jugador
-            var playerObject = Instantiate(_human);
-            NetworkObject networkObject = playerObject.GetComponent<NetworkObject>();
-            networkObject.SpawnAsPlayerObject(obj);
+           // var playerObject = Instantiate(_human);
+           // NetworkObject networkObject = playerObject.GetComponent<NetworkObject>();
+           // networkObject.SpawnAsPlayerObject(obj);
 
             /*
             Player player = playerObject.GetComponent<Player>();
             player.ID = obj;
             */
         }
+    }
+
+    private void OnClientFinishedLoadingScene(ulong clientId, string sceneName, LoadSceneMode mode)
+    {
+        if (sceneName == "GameScene")
+        {
+            Debug.Log($"Cliente {clientId} ha cargado GameScene. Haciendo spawn.");
+
+            var playerObject = Instantiate(_human);
+            var networkObject = playerObject.GetComponent<NetworkObject>();
+            networkObject.SpawnAsPlayerObject(clientId);
+        }
+        /*
+        if (sceneName == "GameScene")
+        {
+            Debug.Log($"Cliente {clientId} ha cargado GameScene. Haciendo spawn.");
+
+            // Encontrar LevelBuilder en la escena
+            LevelBuilder levelBuilder = FindObjectOfType<LevelBuilder>();
+            if (levelBuilder == null)
+            {
+                Debug.LogError("No se encontró LevelBuilder en la escena.");
+                return;
+            }
+
+            List<Vector3> humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
+
+            if (nextSpawnIndex >= humanSpawnPoints.Count)
+            {
+                Debug.LogWarning("No quedan puntos de spawn disponibles.");
+                return;
+            }
+
+            Vector3 spawnPos = humanSpawnPoints[nextSpawnIndex++];
+
+            // Instanciar jugador en esa posición
+            GameObject playerObject = Instantiate(_human, spawnPos, Quaternion.identity);
+            var networkObject = playerObject.GetComponent<NetworkObject>();
+            networkObject.SpawnAsPlayerObject(clientId);
+        }*/
     }
 
     // Evento cuando un cliente se ha desconectado
