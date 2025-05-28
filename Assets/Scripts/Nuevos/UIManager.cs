@@ -8,7 +8,7 @@ using Unity.Services.Relay;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class UIManager : MonoBehaviour
+public class UIManager : NetworkBehaviour
 {
     //[SerializeField]
     //NetworkManager _NetworkManager;
@@ -16,6 +16,14 @@ public class UIManager : MonoBehaviour
     string joinCode = "Enter room code...";
     public string joinName = "Player Name...";
     public bool mostrarBox = true;
+
+    public NetworkVariable<int> readyPlayersNT = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    public bool ready = false;
+
+    public NetworkVariable<bool> gameStartedNT = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    public NetworkVariable<bool> endedGameNT = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+    public GameManager GameManager;
 
     public static UIManager Instance { get; private set; }
 
@@ -30,6 +38,15 @@ public class UIManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(this.gameObject); // Persiste entre escenas
     }
+
+    private void Update()
+    {
+        if (gameStartedNT.Value)
+        {
+            NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
+        }
+    }
+
 
     void OnGUI()
     {
@@ -93,8 +110,6 @@ public class UIManager : MonoBehaviour
         te.Copy();
 
         NetworkManager.Singleton.StartHost();
-
-        NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
     }
 
 
@@ -120,5 +135,52 @@ public class UIManager : MonoBehaviour
         GUILayout.Label("Transport: " + NetworkManager.Singleton.NetworkConfig.NetworkTransport.GetType().Name);
         GUILayout.Label("Mode: " + mode);
         GUILayout.Label("Join code: " + joinCode);
+
+        MostrarReadyButton();
+    }
+
+    private void MostrarReadyButton()
+    {
+        if (!gameStartedNT.Value || endedGameNT.Value)
+        {
+            if (GUILayout.Button(ready ? "Not Ready" : "Ready", GUILayout.Width(200)))
+            {
+                ready = !ready;
+                ReadyServerRPC(ready);
+            }
+
+            GUILayout.Space(20); // Espacio entre secciones
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void ReadyServerRPC(bool isReady)
+    {
+        if (isReady)
+        {
+            readyPlayersNT.Value += 1;
+            Debug.Log("Jugadores listos: " + readyPlayersNT.Value + " de " + GameManager.clientes.Value);
+            if (GameManager.EqualsReadyConnected(readyPlayersNT.Value))
+            {
+                Debug.Log("Todos los jugadores están listos.");
+                gameStartedNT.Value = true;
+            }
+        }
+        else
+        {
+            readyPlayersNT.Value -= 1;
+            Debug.Log("Jugadores listos: " + readyPlayersNT.Value + " de " + GameManager.clientes.Value);
+        }
+    }
+
+
+    [ServerRpc(RequireOwnership = false)]
+    public void EndGameServerRPC(bool end)
+    {
+        if (end)
+        {
+            endedGameNT.Value = true;
+            gameStartedNT.Value = false;
+        }
     }
 }
