@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using Unity.Netcode;
+using Unity.Collections;
 
 public class PlayerController : NetworkBehaviour
 {
@@ -26,30 +27,10 @@ public class PlayerController : NetworkBehaviour
     private float horizontalInput;         // Entrada horizontal (A/D o flechas)
     private float verticalInput;           // Entrada vertical (W/S o flechas)
 
+    public NetworkVariable<FixedString64Bytes> playerNameNT = new NetworkVariable<FixedString64Bytes> ("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
     void Start()
     {
-        if (!IsOwner)
-        {
-            enabled = false;
-            return;
-        }
-
-        // Sincronizar la camara
-
-        if (IsOwner)
-        {
-            Camera mainCam = Camera.main;
-            if (mainCam != null)
-            {
-                CameraController camController = mainCam.GetComponent<CameraController>();
-                if (camController != null)
-                {
-                    camController.player = this.transform;
-                    camController.enabled = true;
-                }
-            }
-        }
-
         // Buscar el objeto "CanvasPlayer" en la escena
         GameObject canvas = GameObject.Find("CanvasPlayer");
 
@@ -62,11 +43,9 @@ public class PlayerController : NetworkBehaviour
         {
             Debug.Log("Canvas encontrado");
 
-            // Buscar el Panel dentro del CanvasHud
             Transform panel = canvas.transform.Find("PanelHud");
             if (panel != null)
             {
-                // Buscar el TextMeshProUGUI llamado "CoinsValue" dentro del Panel
                 Transform coinTextTransform = panel.Find("CoinsValue");
                 if (coinTextTransform != null)
                 {
@@ -76,7 +55,39 @@ public class PlayerController : NetworkBehaviour
         }
 
         UpdateCoinUI();
+
+        playerNameNT.OnValueChanged += OnNameChanged;
     }
+
+    public override void OnNetworkSpawn()
+    {
+        if (!IsOwner) return;
+
+        playerNameNT.Value = UIManager.Instance.GetComponent<UIManager>().joinName;
+
+        // Asegurar que la cámara esté asignada correctamente
+        Camera mainCam = Camera.main;
+        if (mainCam != null)
+        {
+            CameraController camController = mainCam.GetComponent<CameraController>();
+            if (camController != null)
+            {
+                camController.player = this.transform;
+                camController.enabled = true;
+                Debug.Log("Cámara vinculada al jugador");
+                cameraTransform = mainCam.transform; // Asignar la cámara al transform del jugador
+            }
+            else
+            {
+                Debug.LogError("CameraController no encontrado en la cámara principal");
+            }
+        }
+        else
+        {
+            Debug.LogError("Camera.main es null al instanciar jugador");
+        }
+    }
+
 
     void Update()
     {
@@ -139,6 +150,11 @@ public class PlayerController : NetworkBehaviour
         {
             coinText.text = $"{CoinsCollected}";
         }
+    }
+
+    private void OnNameChanged(FixedString64Bytes previous, FixedString64Bytes current)
+    {
+        this.GetComponentInChildren<TextMeshPro>().text = current.ToString();
     }
 }
 
