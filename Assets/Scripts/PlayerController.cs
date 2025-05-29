@@ -68,18 +68,17 @@ public class PlayerController : NetworkBehaviour
             // El Owner (host o cliente) establece su nombre
             playerNameNT.Value = UIManager.Instance.GetComponent<UIManager>().joinName;
             Debug.Log("Jugador instanciado con nombre (owner): " + playerNameNT.Value);
+
+            // Asegurar que la cámara esté asignada correctamente
+            AssignCamera();
         }
 
         // Todos (owner o no) actualizan visualmente el nombre en pantalla
         OnNameChanged(playerNameNT.Value, playerNameNT.Value);
+    }
 
-        if (!IsOwner) return;
-
-        playerNameNT.Value = UIManager.Instance.GetComponent<UIManager>().joinName;
-
-        Debug.Log("Jugador instanciado con nombre: " + playerNameNT.Value);
-
-        // Asegurar que la cámara esté asignada correctamente
+    private void AssignCamera()
+    {
         Camera mainCam = Camera.main;
         if (mainCam != null)
         {
@@ -139,7 +138,16 @@ public class PlayerController : NetworkBehaviour
 
             // Mover al jugador en la dirección deseada
             transform.Translate(moveDirection * adjustedSpeed * Time.deltaTime, Space.World);
+
+            MoveRequestRpc(transform.position, transform.rotation);
         }
+    }
+
+    [Rpc(SendTo.ClientsAndHost)]
+    void MoveRequestRpc(Vector3 pos, Quaternion rot)
+    {
+        this.transform.position = pos;
+        this.transform.rotation = rot;
     }
 
     void HandleAnimations()

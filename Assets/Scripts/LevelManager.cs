@@ -4,6 +4,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Unity.Netcode;
 
 public enum GameMode
 {
@@ -11,7 +12,7 @@ public enum GameMode
     Monedas
 }
 
-public class LevelManager : MonoBehaviour
+public class LevelManager : NetworkBehaviour
 {
     #region Properties
 
@@ -119,7 +120,7 @@ public class LevelManager : MonoBehaviour
             CoinsGenerated = levelBuilder.GetCoinsGenerated();
         }
 
-        // SpawnTeams(); //genera personajes en local (base)
+        SpawnTeams(); //genera personajes en local (base)
         
         UpdateTeamUI();
     }
@@ -307,7 +308,7 @@ public class LevelManager : MonoBehaviour
         }
     }
 
-    private void SpawnPlayer(Vector3 spawnPosition, GameObject prefab)
+    private void SpawnPlayer(Vector3 spawnPosition, GameObject prefab, ulong clientId)
     {
         Debug.Log($"Instanciando jugador en {spawnPosition}");
         if (prefab != null)
@@ -315,6 +316,8 @@ public class LevelManager : MonoBehaviour
             Debug.Log($"Instanciando jugador en {spawnPosition}");
             // Crear una instancia del prefab en el punto especificado
             GameObject player = Instantiate(prefab, spawnPosition, Quaternion.identity);
+            NetworkObject playerNetworkObject = player.GetComponent<NetworkObject>();
+            playerNetworkObject.SpawnAsPlayerObject(clientId);
             player.tag = "Player";
 
             // Obtener la referencia a la cámara principal
@@ -363,7 +366,14 @@ public class LevelManager : MonoBehaviour
     {
         Debug.Log("Instanciando equipos");
         if (humanSpawnPoints.Count <= 0) { return; }
-        SpawnPlayer(humanSpawnPoints[0], playerPrefab);
+
+        var clients = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
+
+        for (int i = 0; i < clients.Length; i++)
+        {
+            SpawnPlayer(humanSpawnPoints[i], playerPrefab, clients[i]);
+        }
+
         Debug.Log($"Personaje jugable instanciado en {humanSpawnPoints[0]}");
 
         for (int i = 1; i < numberOfHumans; i++)

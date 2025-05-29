@@ -147,7 +147,14 @@ public class UIManager : NetworkBehaviour
         {
             if (GUILayout.Button(ready ? "Not Ready" : "Ready", GUILayout.Width(200)))
             {
+                //cambiar
                 ready = !ready;
+                var allPlayers = GameObject.FindGameObjectsWithTag("Player");
+                foreach (var player in allPlayers)
+                {
+                    player.GetComponent<NetworkObject>().Despawn();
+                }
+                NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
                 ReadyServerRPC(ready);
             }
 
