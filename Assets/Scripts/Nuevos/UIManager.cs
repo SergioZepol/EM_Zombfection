@@ -75,6 +75,8 @@ public class UIManager : NetworkBehaviour
         else
         {
             mostrarBox = false;
+            Canvas canvas = GameObject.FindAnyObjectByType<Canvas>();
+            canvas.GetComponent<Canvas>().enabled = false; // Desactiva el Canvas si ya es cliente o servidor
             StatusLabels();
         }
 

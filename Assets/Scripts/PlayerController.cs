@@ -29,6 +29,10 @@ public class PlayerController : NetworkBehaviour
 
     public NetworkVariable<FixedString64Bytes> playerNameNT = new NetworkVariable<FixedString64Bytes> ("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
+    private void Awake()
+    {
+        playerNameNT.OnValueChanged += OnNameChanged;
+    }
     void Start()
     {
         // Buscar el objeto "CanvasPlayer" en la escena
@@ -55,15 +59,25 @@ public class PlayerController : NetworkBehaviour
         }
 
         UpdateCoinUI();
-
-        playerNameNT.OnValueChanged += OnNameChanged;
     }
 
     public override void OnNetworkSpawn()
     {
+        if (IsOwner)
+        {
+            // El Owner (host o cliente) establece su nombre
+            playerNameNT.Value = UIManager.Instance.GetComponent<UIManager>().joinName;
+            Debug.Log("Jugador instanciado con nombre (owner): " + playerNameNT.Value);
+        }
+
+        // Todos (owner o no) actualizan visualmente el nombre en pantalla
+        OnNameChanged(playerNameNT.Value, playerNameNT.Value);
+
         if (!IsOwner) return;
 
         playerNameNT.Value = UIManager.Instance.GetComponent<UIManager>().joinName;
+
+        Debug.Log("Jugador instanciado con nombre: " + playerNameNT.Value);
 
         // Asegurar que la cámara esté asignada correctamente
         Camera mainCam = Camera.main;
@@ -154,7 +168,9 @@ public class PlayerController : NetworkBehaviour
 
     private void OnNameChanged(FixedString64Bytes previous, FixedString64Bytes current)
     {
+        Debug.Log("Nombre previo:"+this.GetComponentInChildren<TextMeshPro>().text);
         this.GetComponentInChildren<TextMeshPro>().text = current.ToString();
+        Debug.Log("Nombre después:" + this.GetComponentInChildren<TextMeshPro>().text);
     }
 }
 

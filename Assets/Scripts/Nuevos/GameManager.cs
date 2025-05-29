@@ -18,7 +18,7 @@ public class GameManager : NetworkBehaviour
     // Contador de clientes conectados
     public NetworkVariable<int> clientes = new NetworkVariable<int>();
 
-    // Posiciones de inicio/spawn de los jugadores en la pista
+    // Posiciones de inicio/spawn de los jugadores en la partida
     GameObject startPos;
     GameObject startPos1;
     GameObject startPos2;
@@ -48,10 +48,10 @@ public class GameManager : NetworkBehaviour
         _networkManager.OnClientConnectedCallback += onClientConnected;
         _networkManager.OnClientDisconnectCallback += onClientDisconnect;
 
-        if (NetworkManager.Singleton.IsServer)
-        {
-            NetworkManager.Singleton.SceneManager.OnLoadComplete += OnClientFinishedLoadingScene;
-        }
+        //if (NetworkManager.Singleton.IsServer)
+        //{
+        //    NetworkManager.Singleton.SceneManager.OnLoadComplete += OnClientFinishedLoadingScene;
+        //}
     }
 
     void Awake()
