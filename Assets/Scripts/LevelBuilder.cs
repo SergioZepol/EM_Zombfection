@@ -56,6 +56,7 @@ public class LevelBuilder : MonoBehaviour
     private int CoinsGenerated = 0;
     private HashSet<Vector3> humanSpawnPoints = new HashSet<Vector3>();
     private HashSet<Vector3> zombieSpawnPoints = new HashSet<Vector3>();
+    private UIManager UIManager;
 
     #endregion
 
@@ -73,6 +74,13 @@ public class LevelBuilder : MonoBehaviour
 
     public void Build()
     {
+        //pasar los valores de las coins de UIManager
+        coinsDensity = UIManager.coinsDensity;
+        ítemsDensity = UIManager.itemsDensity;
+        numberOfRooms = UIManager.numberOfRooms;
+        roomWidth = UIManager.roomWidth;
+        roomLength = UIManager.roomLenght;
+
         CreateRooms(roomWidth, roomLength, numberOfRooms);
     }
 
@@ -99,9 +107,6 @@ public class LevelBuilder : MonoBehaviour
                 {
                     //cambiar
                     humanSpawnPoints.Add(spawnPoint);// Abajo - Izquierda
-                    zombieSpawnPoints.Add(spawnPoint + new Vector3(spawnPoint.x * 2, 0, 0)); // Abajo - Derecha
-                    humanSpawnPoints.Add(spawnPoint + new Vector3(0, 0, spawnPoint.z * 2)); // Arriba - Izquierda
-                    zombieSpawnPoints.Add(spawnPoint + new Vector3(spawnPoint.x * 2, 0, spawnPoint.z * 2)); // Arriba - Derecha
                 }
                 else
                 {
