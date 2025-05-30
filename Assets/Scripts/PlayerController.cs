@@ -36,8 +36,12 @@ public class PlayerController : NetworkBehaviour
     }
     void Start()
     {
-        // Buscar el objeto "CanvasPlayer" en la escena
-        GameObject canvas = GameObject.Find("CanvasPlayer");
+    if (IsOwner)
+    {
+        Camera.main.GetComponent<CameraController>().player = this.transform;
+    }
+    // Buscar el objeto "CanvasPlayer" en la escena
+    GameObject canvas = GameObject.Find("CanvasPlayer");
 
         if (!IsOwner && canvas != null)
         {
@@ -168,13 +172,13 @@ public class PlayerController : NetworkBehaviour
         {
             // Calcular la rotación en Y basada en la dirección del movimiento
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 720f * Time.deltaTime);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 720f * Time.fixedDeltaTime);
 
             // Ajustar la velocidad si es zombie
             float adjustedSpeed = isZombie ? moveSpeed * zombieSpeedModifier : moveSpeed;
 
             // Mover al jugador en la dirección deseada
-            transform.Translate(moveDirection * adjustedSpeed * Time.deltaTime, Space.World);
+            transform.Translate(moveDirection * adjustedSpeed * Time.fixedDeltaTime, Space.World);
 
             MoveRequestRpc(transform.position, transform.rotation);
         }
