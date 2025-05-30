@@ -1,8 +1,9 @@
-using UnityEngine;
-using Unity.Netcode;
-using UnityEngine.SceneManagement;
+using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
+using UnityEngine;
 using UnityEngine.Playables;
+using UnityEngine.SceneManagement;
 //using Cinemachine;
 
 public class GameManager : NetworkBehaviour
@@ -122,6 +123,11 @@ public class GameManager : NetworkBehaviour
 
         // Todos están listos, cambiamos de escena
 
+        StartCoroutine(DespawnAndLoadScene());
+    }
+
+    private IEnumerator DespawnAndLoadScene()
+    {
         var allPlayers = GameObject.FindGameObjectsWithTag("Player");
         foreach (var player in allPlayers)
         {
@@ -130,6 +136,10 @@ public class GameManager : NetworkBehaviour
                 netObj.Despawn();
             }
         }
+
+        // Esperar 1 frame (mínimo)
+        yield return null;
+
         NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
     }
 

@@ -63,6 +63,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7523e3c0e12b8394a9ac61e5944eb79b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5556706136901030829}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 7523e3c0e12b8394a9ac61e5944eb79b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8506896213305905465}
   m_SourcePrefab: {fileID: 100100000, guid: 7523e3c0e12b8394a9ac61e5944eb79b, type: 3}
 --- !u!1 &2791038329780034586 stripped
 GameObject:
@@ -90,3 +93,24 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.5, y: 1.1, z: 0.5}
   m_Center: {x: 0, y: 0.55, z: 0}
+--- !u!114 &8506896213305905465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2791038329780034586}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 4286407134
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 1
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1

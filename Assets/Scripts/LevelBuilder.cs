@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
@@ -56,7 +57,8 @@ public class LevelBuilder : MonoBehaviour
     private int CoinsGenerated = 0;
     private HashSet<Vector3> humanSpawnPoints = new HashSet<Vector3>();
     private HashSet<Vector3> zombieSpawnPoints = new HashSet<Vector3>();
-    //private UIManager UIManager;
+    List<NetworkObject> networkObjectsToSpawn = new List<NetworkObject>();
+
 
     #endregion
 
@@ -74,14 +76,8 @@ public class LevelBuilder : MonoBehaviour
 
     public void Build()
     {
-        //pasar los valores de las coins de UIManager
-        coinsDensity = UIManager.Instance.coinsDensity;
-        ítemsDensity = UIManager.Instance.itemsDensity;
-        numberOfRooms = UIManager.Instance.numberOfRooms;
-        roomWidth = UIManager.Instance.roomWidth;
-        roomLength = UIManager.Instance.roomLenght;
-
         CreateRooms(roomWidth, roomLength, numberOfRooms);
+        SpawnAllNetworkObjects();
     }
 
     /// <summary>
@@ -107,6 +103,9 @@ public class LevelBuilder : MonoBehaviour
                 {
                     //cambiar
                     humanSpawnPoints.Add(spawnPoint);// Abajo - Izquierda
+                    zombieSpawnPoints.Add(spawnPoint + new Vector3(spawnPoint.x * 2, 0, 0)); // Abajo - Derecha
+                    humanSpawnPoints.Add(spawnPoint + new Vector3(0, 0, spawnPoint.z * 2)); // Arriba - Izquierda
+                    zombieSpawnPoints.Add(spawnPoint + new Vector3(spawnPoint.x * 2, 0, spawnPoint.z * 2)); // Arriba - Derecha
                 }
                 else
                 {
@@ -152,6 +151,12 @@ public class LevelBuilder : MonoBehaviour
 
                 Vector3 tilePosition = new Vector3(x * tileSize + offsetX, 0, z * tileSize + offsetZ);
                 GameObject tile = Instantiate(selectedFloorPrefab, tilePosition, Quaternion.identity, roomParent);
+                NetworkObject netObj = tile.GetComponent<NetworkObject>();
+
+                if (netObj != null)
+                {
+                    networkObjectsToSpawn.Add(netObj);
+                }
                 tile.name = $"Tile_{x}_{z}";
 
                 CreateDecorativeItem(x, z, width, length, tilePosition);
@@ -222,7 +227,13 @@ public class LevelBuilder : MonoBehaviour
     private void PlaceElement(GameObject prefab, float x, float z, Quaternion rotation)
     {
         Vector3 position = new Vector3(x, 0, z);
-        Instantiate(prefab, position, rotation, roomParent);
+        GameObject pared = Instantiate(prefab, position, rotation, roomParent);
+        NetworkObject netObj = pared.GetComponent<NetworkObject>();
+
+        if (netObj != null)
+        {
+            networkObjectsToSpawn.Add(netObj);
+        }
     }
 
     /// <summary>
@@ -349,6 +360,16 @@ public class LevelBuilder : MonoBehaviour
         return CoinsGenerated;
     }
 
+
+    private void SpawnAllNetworkObjects()
+    {
+        foreach (var netObj in networkObjectsToSpawn)
+        {
+            netObj.Spawn(true); // true para que todos los clientes lo vean
+        }
+
+        networkObjectsToSpawn.Clear();
+    }
     #endregion
 }
 
