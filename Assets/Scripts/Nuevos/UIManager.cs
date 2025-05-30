@@ -17,12 +17,6 @@ public class UIManager : NetworkBehaviour
     public string joinName = "Player Name...";
     public bool mostrarBox = true;
 
-    public NetworkVariable<int> readyPlayersNT = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-    public bool ready = false;
-
-    public NetworkVariable<bool> gameStartedNT = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-    public NetworkVariable<bool> endedGameNT = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
-
     public GameManager GameManager;
 
     public static UIManager Instance { get; private set; }
@@ -37,14 +31,6 @@ public class UIManager : NetworkBehaviour
 
         Instance = this;
         DontDestroyOnLoad(this.gameObject); // Persiste entre escenas
-    }
-
-    private void Update()
-    {
-        if (gameStartedNT.Value)
-        {
-            NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
-        }
     }
 
 
@@ -93,7 +79,7 @@ public class UIManager : NetworkBehaviour
         joinName = GUILayout.TextField(joinName);
 
     }
-        private async void StartHost()
+    private async void StartHost()
     {
         await UnityServices.InitializeAsync();
 
@@ -114,8 +100,7 @@ public class UIManager : NetworkBehaviour
         NetworkManager.Singleton.StartHost();
     }
 
-
-        private async void StartClient()
+    private async void StartClient()
     {
         await UnityServices.InitializeAsync();
         if (!AuthenticationService.Instance.IsSignedIn)
@@ -127,7 +112,6 @@ public class UIManager : NetworkBehaviour
         NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(joinAllocation, "dtls"));
         NetworkManager.Singleton.StartClient();
     }
-    
 
     void StatusLabels()
     {
@@ -143,53 +127,15 @@ public class UIManager : NetworkBehaviour
 
     private void MostrarReadyButton()
     {
-        if (!gameStartedNT.Value || endedGameNT.Value)
-        {
-            if (GUILayout.Button(ready ? "Not Ready" : "Ready", GUILayout.Width(200)))
-            {
-                //cambiar
-                ready = !ready;
-                var allPlayers = GameObject.FindGameObjectsWithTag("Player");
-                foreach (var player in allPlayers)
-                {
-                    player.GetComponent<NetworkObject>().Despawn();
-                }
-                NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
-                ReadyServerRPC(ready);
-            }
+        var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject?.GetComponent<PlayerState>();
+        if (localPlayer == null) return;
 
-            GUILayout.Space(20); // Espacio entre secciones
-        }
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    public void ReadyServerRPC(bool isReady)
-    {
-        if (isReady)
+        if (GUILayout.Button(localPlayer.isReady.Value ? "Not Ready" : "Ready", GUILayout.Width(200)))
         {
-            readyPlayersNT.Value += 1;
-            Debug.Log("Jugadores listos: " + readyPlayersNT.Value + " de " + GameManager.clientes.Value);
-            if (GameManager.EqualsReadyConnected(readyPlayersNT.Value))
-            {
-                Debug.Log("Todos los jugadores están listos.");
-                gameStartedNT.Value = true;
-            }
+            // Llama al ServerRpc para cambiar el estado
+            localPlayer.SetReadyServerRpc(!localPlayer.isReady.Value);
         }
-        else
-        {
-            readyPlayersNT.Value -= 1;
-            Debug.Log("Jugadores listos: " + readyPlayersNT.Value + " de " + GameManager.clientes.Value);
-        }
-    }
 
-
-    [ServerRpc(RequireOwnership = false)]
-    public void EndGameServerRPC(bool end)
-    {
-        if (end)
-        {
-            endedGameNT.Value = true;
-            gameStartedNT.Value = false;
-        }
+        GUILayout.Space(20); // Espacio entre secciones
     }
 }

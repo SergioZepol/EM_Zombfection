@@ -2,6 +2,7 @@ using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
+using UnityEngine.Playables;
 //using Cinemachine;
 
 public class GameManager : NetworkBehaviour
@@ -37,9 +38,6 @@ public class GameManager : NetworkBehaviour
 
     void Start()
     {
-        // Cacheo del NetworkManager
-        //_networkManager = NetworkManager.Singleton;
-
         // El humano va a ser de entre la lista de prefabs al jugador
         _human = _networkManager.NetworkConfig.Prefabs.Prefabs[0].Prefab;
 
@@ -47,11 +45,6 @@ public class GameManager : NetworkBehaviour
         _networkManager.OnServerStarted += onServerStarted;
         _networkManager.OnClientConnectedCallback += onClientConnected;
         _networkManager.OnClientDisconnectCallback += onClientDisconnect;
-
-        //if (NetworkManager.Singleton.IsServer)
-        //{
-        //    NetworkManager.Singleton.SceneManager.OnLoadComplete += OnClientFinishedLoadingScene;
-        //}
     }
 
     void Awake()
@@ -95,52 +88,7 @@ public class GameManager : NetworkBehaviour
             var playerObject = Instantiate(_human);
             NetworkObject networkObject = playerObject.GetComponent<NetworkObject>();
             networkObject.SpawnAsPlayerObject(obj);
-
-            /*
-            Player player = playerObject.GetComponent<Player>();
-            player.ID = obj;
-            */
         }
-    }
-
-    private void OnClientFinishedLoadingScene(ulong clientId, string sceneName, LoadSceneMode mode)
-    {
-        if (sceneName == "GameScene")
-        {
-            Debug.Log($"Cliente {clientId} ha cargado GameScene. Haciendo spawn.");
-
-            var playerObject = Instantiate(_human);
-            var networkObject = playerObject.GetComponent<NetworkObject>();
-            networkObject.SpawnAsPlayerObject(clientId);
-        }
-        /*
-        if (sceneName == "GameScene")
-        {
-            Debug.Log($"Cliente {clientId} ha cargado GameScene. Haciendo spawn.");
-
-            // Encontrar LevelBuilder en la escena
-            LevelBuilder levelBuilder = FindObjectOfType<LevelBuilder>();
-            if (levelBuilder == null)
-            {
-                Debug.LogError("No se encontró LevelBuilder en la escena.");
-                return;
-            }
-
-            List<Vector3> humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
-
-            if (nextSpawnIndex >= humanSpawnPoints.Count)
-            {
-                Debug.LogWarning("No quedan puntos de spawn disponibles.");
-                return;
-            }
-
-            Vector3 spawnPos = humanSpawnPoints[nextSpawnIndex++];
-
-            // Instanciar jugador en esa posición
-            GameObject playerObject = Instantiate(_human, spawnPos, Quaternion.identity);
-            var networkObject = playerObject.GetComponent<NetworkObject>();
-            networkObject.SpawnAsPlayerObject(clientId);
-        }*/
     }
 
     // Evento cuando un cliente se ha desconectado
@@ -151,15 +99,7 @@ public class GameManager : NetworkBehaviour
         {
             clientes.Value -= 1;
             Debug.Log("Clientes conectados: " + clientes.Value);
-            /*
-            if (raceStartedNT.Value)
-            { // Si solo queda un jugador, fin de la partida
-                if (clientes.Value == 1)
-                {
-                    EndGame();
-                }
-            }
-            */
+            // Si solo queda un jugador, fin de la partida
         }
     }
 
@@ -167,14 +107,28 @@ public class GameManager : NetworkBehaviour
 
     #region Métodos Públicos
 
-    // Comprueba si el número de jugadores listos es igual al número total de clientes conectados
-    public bool EqualsReadyConnected(int ready)
+    public void CheckAllReady()
     {
-        if (clientes.Value <= 1)
+        if (!IsServer) return;
+
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
         {
-            return false;
+            var player = client.PlayerObject.GetComponent<PlayerState>();
+            if (player == null || !player.isReady.Value)
+                return; // Al menos uno no está listo
         }
-        return ready == clientes.Value;
+
+        // Todos están listos, cambiamos de escena
+
+        var allPlayers = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var player in allPlayers)
+        {
+            if (player.TryGetComponent<NetworkObject>(out var netObj))
+            {
+                netObj.Despawn();
+            }
+        }
+        NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
     }
 
     // Devuelve el número de clientes conectados
@@ -193,7 +147,7 @@ public class GameManager : NetworkBehaviour
     {
         Debug.Log("Fin de Partida: Un jugador restante");
         /*
-        RaceEnded();
+        GameEnded();
         */
     }
 
