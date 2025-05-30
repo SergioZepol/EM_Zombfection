@@ -56,7 +56,7 @@ public class LevelBuilder : MonoBehaviour
     private int CoinsGenerated = 0;
     private HashSet<Vector3> humanSpawnPoints = new HashSet<Vector3>();
     private HashSet<Vector3> zombieSpawnPoints = new HashSet<Vector3>();
-    private UIManager UIManager;
+    //private UIManager UIManager;
 
     #endregion
 
@@ -75,11 +75,11 @@ public class LevelBuilder : MonoBehaviour
     public void Build()
     {
         //pasar los valores de las coins de UIManager
-        coinsDensity = UIManager.coinsDensity;
-        ítemsDensity = UIManager.itemsDensity;
-        numberOfRooms = UIManager.numberOfRooms;
-        roomWidth = UIManager.roomWidth;
-        roomLength = UIManager.roomLenght;
+        coinsDensity = UIManager.Instance.coinsDensity;
+        ítemsDensity = UIManager.Instance.itemsDensity;
+        numberOfRooms = UIManager.Instance.numberOfRooms;
+        roomWidth = UIManager.Instance.roomWidth;
+        roomLength = UIManager.Instance.roomLenght;
 
         CreateRooms(roomWidth, roomLength, numberOfRooms);
     }

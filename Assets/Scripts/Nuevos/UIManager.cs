@@ -51,6 +51,7 @@ public class UIManager : NetworkBehaviour
 
         // Puedes usar esto si quieres controlar cuándo se muestra el box (igual que en el segundo código)
         bool mostrarBox = !NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer;
+        bool enabled = false;
 
         if (mostrarBox)
         {
@@ -73,8 +74,14 @@ public class UIManager : NetworkBehaviour
         }
         else
         {
-            Canvas canvas = GameObject.FindAnyObjectByType<Canvas>();
-            canvas.GetComponent<Canvas>().enabled = true; // Desactiva el Canvas si ya es cliente o servidor
+            /*
+            if (!enabled)
+            {
+                Canvas canvas = GameObject.FindAnyObjectByType<Canvas>();
+                canvas.GetComponent<Canvas>().enabled = true; // Desactiva el Canvas si ya es cliente o servidor
+                enabled = true;
+            }
+            */
             StatusLabels();
         }
 
