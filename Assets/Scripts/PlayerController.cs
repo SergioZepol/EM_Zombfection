@@ -101,7 +101,6 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-
     void Update()
     {
 
@@ -112,10 +111,47 @@ public class PlayerController : NetworkBehaviour
         verticalInput = Input.GetAxis("Vertical");
 
         // Mover el jugador
-        MovePlayer();
+        //MovePlayer();
+        if (!IsHost)
+        {
+            // Calcula la dirección en base a la cámara del cliente
+            if (cameraTransform != null)
+            {
+                Vector3 moveDir = (cameraTransform.forward * verticalInput + cameraTransform.right * horizontalInput).normalized;
+                moveDir.y = 0f;
 
-        // Manejar las animaciones del jugador
+                if (moveDir != Vector3.zero)
+                {
+                    SendDirectionToServerRpc(moveDir);
+                }
+            }
+        }
+        else
+        {
+            MovePlayer();
+        }
         HandleAnimations();
+    }
+
+    [ServerRpc]
+    void SendDirectionToServerRpc(Vector3 moveDirection)
+    {
+        if (moveDirection == Vector3.zero) return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 720f * Time.fixedDeltaTime);
+
+        float adjustedSpeed = isZombie ? moveSpeed * zombieSpeedModifier : moveSpeed;
+        transform.Translate(moveDirection * adjustedSpeed * Time.fixedDeltaTime, Space.World);
+
+        BroadcastTransformClientRpc(transform.position, transform.rotation);
+    }
+
+    [ClientRpc]
+    void BroadcastTransformClientRpc(Vector3 pos, Quaternion rot)
+    {
+        transform.position = pos;
+        transform.rotation = rot;
     }
 
     void MovePlayer()
@@ -153,7 +189,7 @@ public class PlayerController : NetworkBehaviour
     void HandleAnimations()
     {
         // Animaciones basadas en la dirección del movimiento
-        animator.SetFloat("Speed", Mathf.Abs(horizontalInput) + Mathf.Abs(verticalInput));  // Controla el movimiento (caminar/correr)
+        this.animator.SetFloat("Speed", Mathf.Abs(horizontalInput) + Mathf.Abs(verticalInput));  // Controla el movimiento (caminar/correr)
     }
 
     public void CoinCollected()
