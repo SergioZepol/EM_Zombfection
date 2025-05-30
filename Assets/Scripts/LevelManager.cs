@@ -112,7 +112,7 @@ public class LevelManager : NetworkBehaviour
         remainingSeconds = minutes * 60;
 
         // Obtener los puntos de aparición y el número de monedas generadas desde LevelBuilder
-        if (levelBuilder != null)
+        if (levelBuilder != null && (IsServer || IsHost))
         {
             levelBuilder.Build();
             humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
@@ -120,7 +120,7 @@ public class LevelManager : NetworkBehaviour
             CoinsGenerated = levelBuilder.GetCoinsGenerated();
         }
 
-        SpawnTeams(); //genera personajes en local (base)
+        SpawnTeams();
         
         UpdateTeamUI();
     }
@@ -494,7 +494,3 @@ public class LevelManager : NetworkBehaviour
     #endregion
 
 }
-
-
-
-

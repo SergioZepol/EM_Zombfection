@@ -111,6 +111,8 @@ public class GameManager : NetworkBehaviour
     {
         if (!IsServer) return;
 
+        if (NetworkManager.Singleton.ConnectedClientsList.Count < 2) return;
+
         foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
         {
             var player = client.PlayerObject.GetComponent<PlayerState>();

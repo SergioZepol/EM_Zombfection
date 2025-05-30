@@ -16,6 +16,11 @@ public class UIManager : NetworkBehaviour
     string joinCode = "Enter room code...";
     public string joinName = "Player Name...";
     public bool mostrarBox = true;
+    public int numberOfRooms = 4;
+    public int roomWidth = 9;
+    public int roomLenght = 9;
+    public float itemsDensity = 20;
+    public float coinsDensity = 20;
 
     public GameManager GameManager;
 
@@ -58,11 +63,18 @@ public class UIManager : NetworkBehaviour
         {
             StartButtons();
         }
-        else
+        else if ((NetworkManager.Singleton.IsClient || NetworkManager.Singleton.IsServer) && SceneManager.GetActiveScene().name != "GameScene")
         {
             mostrarBox = false;
             Canvas canvas = GameObject.FindAnyObjectByType<Canvas>();
             canvas.GetComponent<Canvas>().enabled = false; // Desactiva el Canvas si ya es cliente o servidor
+            StatusLabels();
+            GameConfig();
+        }
+        else
+        {
+            Canvas canvas = GameObject.FindAnyObjectByType<Canvas>();
+            canvas.GetComponent<Canvas>().enabled = true; // Desactiva el Canvas si ya es cliente o servidor
             StatusLabels();
         }
 
@@ -71,8 +83,9 @@ public class UIManager : NetworkBehaviour
 
     void StartButtons()
     {
-        if (GUILayout.Button("Host")) StartHost();
-        if (GUILayout.Button("Client")) StartClient();
+        
+        if (GUILayout.Button("Host") && joinName.Length <30) StartHost();
+        if (GUILayout.Button("Client") && joinName.Length < 30) StartClient();
 
         // Campos de texto para código y nombre
         joinCode = GUILayout.TextField(joinCode);
@@ -81,6 +94,10 @@ public class UIManager : NetworkBehaviour
     }
     private async void StartHost()
     {
+        if (joinName == "Player Name..." || joinName == "" || joinName.Contains("Client"))
+        {
+            joinName = "HostPlayer"; // Nombre por defecto si no se ingresa uno
+        }
         await UnityServices.InitializeAsync();
 
         if (!AuthenticationService.Instance.IsSignedIn)
@@ -102,6 +119,11 @@ public class UIManager : NetworkBehaviour
 
     private async void StartClient()
     {
+        if (joinName == "Player Name..." || joinName == "")
+        {
+            joinName = "ClientPlayer" + Random.Range(1, 1000); // Nombre por defecto si no se ingresa uno
+        }
+
         await UnityServices.InitializeAsync();
         if (!AuthenticationService.Instance.IsSignedIn)
         {
@@ -121,11 +143,9 @@ public class UIManager : NetworkBehaviour
         GUILayout.Label("Transport: " + NetworkManager.Singleton.NetworkConfig.NetworkTransport.GetType().Name);
         GUILayout.Label("Mode: " + mode);
         GUILayout.Label("Join code: " + joinCode);
-
-        MostrarReadyButton();
     }
 
-    private void MostrarReadyButton()
+    private void GameConfig()
     {
         var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject?.GetComponent<PlayerState>();
         if (localPlayer == null) return;
@@ -136,6 +156,24 @@ public class UIManager : NetworkBehaviour
             localPlayer.SetReadyServerRpc(!localPlayer.isReady.Value);
         }
 
-        GUILayout.Space(20); // Espacio entre secciones
+        if (IsHost || IsServer)
+        {
+            // Sliders para enteros
+            GUILayout.Label("Number of Rooms: " + numberOfRooms);
+            numberOfRooms = (int)GUILayout.HorizontalSlider(numberOfRooms, 4, 50);
+
+            GUILayout.Label("Room Width: " + roomWidth);
+            roomWidth = (int)GUILayout.HorizontalSlider(roomWidth, 5, 20);
+
+            GUILayout.Label("Room Length: " + roomLenght);
+            roomLenght = (int)GUILayout.HorizontalSlider(roomLenght, 5, 20);
+
+            // Sliders para floats
+            GUILayout.Label("Items Density: " + itemsDensity.ToString("F1"));
+            itemsDensity = GUILayout.HorizontalSlider(itemsDensity, 5f, 30f);
+
+            GUILayout.Label("Coins Density: " + coinsDensity.ToString("F1"));
+            coinsDensity = GUILayout.HorizontalSlider(coinsDensity, 5f, 30f);
+        }
     }
 }

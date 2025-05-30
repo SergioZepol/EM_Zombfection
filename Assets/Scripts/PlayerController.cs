@@ -28,6 +28,7 @@ public class PlayerController : NetworkBehaviour
     private float verticalInput;           // Entrada vertical (W/S o flechas)
 
     public NetworkVariable<FixedString64Bytes> playerNameNT = new NetworkVariable<FixedString64Bytes> ("", NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    public NetworkVariable<float> moveSpeedSync = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone,NetworkVariableWritePermission.Owner);
 
     private void Awake()
     {
@@ -188,8 +189,21 @@ public class PlayerController : NetworkBehaviour
 
     void HandleAnimations()
     {
-        // Animaciones basadas en la dirección del movimiento
-        this.animator.SetFloat("Speed", Mathf.Abs(horizontalInput) + Mathf.Abs(verticalInput));  // Controla el movimiento (caminar/correr)
+        float speed = Mathf.Abs(horizontalInput) + Mathf.Abs(verticalInput);
+        animator.SetFloat("Speed", speed);
+
+        if (IsOwner)
+        {
+            moveSpeedSync.Value = speed;
+        }
+    }
+
+    void LateUpdate()
+    {
+        if (!IsOwner)
+        {
+            animator.SetFloat("Speed", moveSpeedSync.Value);
+        }
     }
 
     public void CoinCollected()
