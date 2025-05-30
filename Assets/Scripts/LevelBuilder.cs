@@ -66,6 +66,11 @@ public class LevelBuilder : MonoBehaviour
 
     private void Awake()
     {
+        coinsDensity = UIManager.Instance.coinsDensity;
+        ítemsDensity = UIManager.Instance.itemsDensity;
+        numberOfRooms = UIManager.Instance.numberOfRooms;
+        roomWidth = UIManager.Instance.roomWidth;
+        roomLength = UIManager.Instance.roomLenght;
         GameObject parentObject = new GameObject("RoomsParent");
         roomParent = parentObject.transform;
     }
