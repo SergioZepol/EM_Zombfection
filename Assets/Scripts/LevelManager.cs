@@ -45,6 +45,7 @@ public class LevelManager : NetworkBehaviour
 
     private int CoinsGenerated = 0;
 
+
     public string PlayerPrefabName => playerPrefab.name;
     public string ZombiePrefabName => zombiePrefab.name;
 
@@ -168,11 +169,6 @@ public class LevelManager : NetworkBehaviour
             }
         }
         UpdateTeamUI();
-
-        if (isGameOver)
-        {
-            ShowGameOverPanel();
-        }
     }
 
     #endregion
@@ -214,8 +210,12 @@ public class LevelManager : NetworkBehaviour
                 playerController.enabled = enabled;
                 playerController.isZombie.Value = true; // Cambiar el estado a zombie
                 playerController.uniqueID = uniqueID; // Mantener el identificador único
-                numberOfHumans--; // Reducir el número de humanos
-                numberOfZombies++; // Aumentar el número de zombis
+                GameManager.Instance.HumanosVivos.Value--; // Reducir el número de humanos
+                GameManager.Instance.ZombiesVivos.Value++; // Aumentar el número de zombis
+                if(GameManager.Instance.HumanosVivos.Value == 0 && !GameManager.Instance.endHumanWin.Value)
+                {
+                    GameManager.Instance.endZombieWin.Value = true;
+                }
                 UpdateTeamUI();
 
                 if (enabled)
@@ -277,8 +277,8 @@ public class LevelManager : NetworkBehaviour
                     playerController.enabled = true;
                     playerController.cameraTransform = mainCamera.transform;
                     playerController.isZombie.Value = false; // Cambiar el estado a humano
-                    numberOfHumans++; // Aumentar el número de humanos
-                    numberOfZombies--; // Reducir el número de zombis
+                    GameManager.Instance.HumanosVivos.Value++; ; // Aumentar el número de humanos
+                    GameManager.Instance.ZombiesVivos.Value--; // Reducir el número de zombis
                 }
                 else
                 {
@@ -333,7 +333,17 @@ public class LevelManager : NetworkBehaviour
                     playerController.enabled = true;
                     playerController.cameraTransform = mainCamera.transform;
                     playerController.uniqueID = uniqueIdGenerator.GenerateUniqueID(); // Generar un identificador único
-
+                    if (IsOwner) // Esto asegura que solo el dueño lo configure (opcional)
+                    {
+                        if (prefab.name.Contains("character-orc"))
+                        {
+                            playerController.isZombie.Value = true;
+                        }
+                        else
+                        {
+                            playerController.isZombie.Value = false;
+                        }
+                    }
                 }
                 else
                 {
@@ -373,13 +383,13 @@ public class LevelManager : NetworkBehaviour
             if (i % 2 == 0)
             {
                 SpawnPlayer(zombieSpawnPoints[i], zombiePrefab, clients[i]);
-                numberOfZombies++; // Aumentar el número de zombis
+                GameManager.Instance.ZombiesVivos.Value++; // Aumentar el número de zombis
             }
             else
             {
 
                 SpawnPlayer(humanSpawnPoints[i], playerPrefab, clients[i]);
-                numberOfHumans++; // Aumentar el número de zombis
+                GameManager.Instance.HumanosVivos.Value++; // Aumentar el número de humanos
             }
         }
 
@@ -425,13 +435,13 @@ public class LevelManager : NetworkBehaviour
         {
             humansText.text = $"{numberOfHumans}";
         }
-        GameManager.Instance.HumanosVivos.Value = numberOfHumans;
+        //GameManager.Instance.HumanosVivos.Value = numberOfHumans;
 
         if (zombiesText != null)
         {
             zombiesText.text = $"{numberOfZombies}";
         }
-        GameManager.Instance.ZombiesVivos.Value = numberOfZombies;
+        //GameManager.Instance.ZombiesVivos.Value = numberOfZombies;
     }
 
     #endregion
@@ -448,9 +458,9 @@ public class LevelManager : NetworkBehaviour
         GameManager.Instance.TiempoRestante.Value = Mathf.FloorToInt(remainingSeconds);
 
         // Comprobar si el tiempo ha llegado a cero
-        if (remainingSeconds <= 0)
+        if (remainingSeconds <= 0 && !GameManager.Instance.endZombieWin.Value)
         {
-            isGameOver = true;
+            GameManager.Instance.endHumanWin.Value = true;
             remainingSeconds = 0;
         }
 
@@ -470,13 +480,15 @@ public class LevelManager : NetworkBehaviour
     {
         if (isGameOver) return;
 
+        
         // Implementar la lógica para el modo de juego basado en monedas
         if (gameModeText != null && playerController != null)
         {
             gameModeText.text = $"{playerController.CoinsCollected}/{CoinsGenerated}";
-            if (playerController.CoinsCollected == CoinsGenerated)
+            if (GameManager.Instance.MonedasRestantes.Value == 0 && !GameManager.Instance.endZombieWin.Value)
             {
-                isGameOver = true;
+                GameManager.Instance.endHumanWin.Value = true;
+
             }
         }
     }
@@ -530,6 +542,10 @@ public class LevelManager : NetworkBehaviour
         }
     }
 
+
+    private void EndGame()
+    {
+    }
     #endregion
 
 }

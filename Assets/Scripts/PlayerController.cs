@@ -15,9 +15,8 @@ public class PlayerController : NetworkBehaviour
     public int CoinsCollected = 0;
 
     [Header("Character settings")]
-    public NetworkVariable<bool> isZombie = new NetworkVariable<bool>(false);    // Añadir una propiedad para el estado del jugador
+    public NetworkVariable<bool> isZombie = new NetworkVariable<bool>();    // Añadir una propiedad para el estado del jugador
     public string uniqueID; // Añadir una propiedad para el identificador único
-    bool camaraBool = false;
 
     [Header("Movement Settings")]
     public float moveSpeed = 5f;           // Velocidad de movimiento
@@ -228,6 +227,8 @@ public class PlayerController : NetworkBehaviour
         if (!isZombie.Value) // Solo los humanos pueden recoger monedas
         {
             this.CoinsCollected++;
+            GameManager.Instance.MonedasRestantes.Value--;
+
             //CoinsCollected.Value++;
             UpdateCoinUI();
         }
@@ -237,7 +238,7 @@ public class PlayerController : NetworkBehaviour
     {
         if (coinText != null)
         {
-            coinText.text = $"{CoinsCollected}";
+            coinText.text = $"{GameManager.Instance.MonedasRestantes.Value}";
         }
     }
 

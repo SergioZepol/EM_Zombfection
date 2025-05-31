@@ -162,7 +162,10 @@ public class LevelBuilder : MonoBehaviour
                 tile.name = $"Tile_{x}_{z}";
 
                 CreateDecorativeItem(x, z, width, length, tilePosition);
-                CreateCoin(x, z, width, length, tilePosition);
+                if (GameManager.Instance.currentMode.Value == GameMode.Monedas)
+                {
+                    CreateCoin(x, z, width, length, tilePosition);
+                }
             }
         }
 

@@ -19,16 +19,9 @@ public class GameManager : NetworkBehaviour
 
     // Contador de clientes conectados
     public NetworkVariable<int> clientes = new NetworkVariable<int>();
+    public NetworkVariable<bool> endHumanWin = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> endZombieWin = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    // Posiciones de inicio/spawn de los jugadores en la partida
-    GameObject startPos;
-    GameObject startPos1;
-    GameObject startPos2;
-    GameObject startPos3;
-    GameObject startPos4;
-
-    // Número máximo de jugadores permitidos
-    public int numPlayers = 4;
 
     // Instancia estática del GameManager
     public static GameManager Instance { get; private set; }
@@ -103,16 +96,12 @@ public class GameManager : NetworkBehaviour
     }
 
     // Evento cuando un cliente se ha desconectado
-    private void onClientDisconnect(ulong obj)
+    private void onClientDisconnect(ulong clientId)
     {
-        // Solo durante la partida, si alguien se desconecta, el servidor determina que se ha ido y se encarga de modificar las variables
-        if (_networkManager.IsServer)
-        {
-            clientes.Value -= 1;
-            Debug.Log("Clientes conectados: " + clientes.Value);
-            // Si solo queda un jugador, fin de la partida
-        }
+        clientes.Value = Mathf.Max(0, clientes.Value - 1);
+        Debug.Log("Clientes conectados (no zombies): " + clientes.Value);
     }
+
 
     #endregion
 

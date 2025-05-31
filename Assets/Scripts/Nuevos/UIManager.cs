@@ -8,6 +8,7 @@ using Unity.Services.Relay;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Runtime.CompilerServices;
+using Unity.VisualScripting;
 
 public class UIManager : NetworkBehaviour
 {
@@ -49,6 +50,8 @@ public class UIManager : NetworkBehaviour
                 numberOfRooms = minRooms;
             }
         }
+
+
     }
 
 
@@ -247,6 +250,14 @@ public class UIManager : NetworkBehaviour
         GUILayout.Label($"Humanos: <{GameManager.Instance.HumanosVivos.Value.ToString("D2")}>", GUILayout.Width(100));
 
         GUILayout.EndHorizontal();
-    }
 
+        if(GameManager.Instance.endHumanWin.Value)
+        {
+            GUILayout.Label("LOS HUMANOS HAN GANADO");
+        }
+        if (GameManager.Instance.endZombieWin.Value)
+        {
+            GUILayout.Label("LOS ZOMBIES HAN GANADO");
+        }
+    }
 }
