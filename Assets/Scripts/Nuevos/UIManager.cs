@@ -1,14 +1,14 @@
+using System.Runtime.CompilerServices;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Networking.Transport.Relay;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
-using Unity.Services.Relay.Models;
 using Unity.Services.Relay;
+using Unity.Services.Relay.Models;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Runtime.CompilerServices;
-using Unity.VisualScripting;
 
 public class UIManager : NetworkBehaviour
 {
@@ -109,8 +109,8 @@ public class UIManager : NetworkBehaviour
 
     void StartButtons()
     {
-        
-        if (GUILayout.Button("Host") && joinName.Length <30) StartHost();
+
+        if (GUILayout.Button("Host") && joinName.Length < 30) StartHost();
         if (GUILayout.Button("Client") && joinName.Length < 30) StartClient();
 
         // Campos de texto para código y nombre
@@ -221,8 +221,11 @@ public class UIManager : NetworkBehaviour
             GUILayout.Label("Items Density: " + itemsDensity.ToString("F1"), GUILayout.Width(300));
             itemsDensity = GUILayout.HorizontalSlider(itemsDensity, 5f, 30f, GUILayout.Width(300));
 
-            GUILayout.Label("Coins Density: " + coinsDensity.ToString("F1"), GUILayout.Width(300));
-            coinsDensity = GUILayout.HorizontalSlider(coinsDensity, 5f, 30f, GUILayout.Width(300));
+            if (GameManager.Instance.currentMode.Value == GameMode.Monedas)
+            {
+                GUILayout.Label("Coins Density: " + coinsDensity.ToString("F1"), GUILayout.Width(300));
+                coinsDensity = GUILayout.HorizontalSlider(coinsDensity, 5f, 30f, GUILayout.Width(300));
+            }
         }
     }
 
@@ -251,13 +254,31 @@ public class UIManager : NetworkBehaviour
 
         GUILayout.EndHorizontal();
 
-        if(GameManager.Instance.endHumanWin.Value)
+        if (GameManager.Instance.endHumanWin.Value)
         {
             GUILayout.Label("LOS HUMANOS HAN GANADO");
+            if (IsHost)
+            {
+                if (GUILayout.Button("Volver al Menú", GUILayout.Width(200)))
+                {
+                    GameManager.Instance.ResetGameState();
+                }
+            }
         }
+
         if (GameManager.Instance.endZombieWin.Value)
         {
             GUILayout.Label("LOS ZOMBIES HAN GANADO");
+            if (IsHost)
+            {
+                if (GUILayout.Button("Volver al Menú", GUILayout.Width(200)))
+                {
+                    GameManager.Instance.ResetGameState();
+                }
+            }
         }
+
     }
+
+
 }

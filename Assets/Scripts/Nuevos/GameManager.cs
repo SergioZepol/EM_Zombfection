@@ -98,8 +98,48 @@ public class GameManager : NetworkBehaviour
     // Evento cuando un cliente se ha desconectado
     private void onClientDisconnect(ulong clientId)
     {
+        StartCoroutine(HandleDisconnect());
+    }
+
+    private IEnumerator HandleDisconnect()
+    {
+        // Espera un frame (puedes aumentar a 0.1f si sigue fallando)
+        yield return null;
+
+        var allPlayers = GameObject.FindGameObjectsWithTag("Player");
+
+        int humanosVivos = 0;
+        int zombiesVivos = 0;
+
+        foreach (var player in allPlayers)
+        {
+            if (player.name.Contains("character-human"))
+            {
+                humanosVivos++;
+            }
+            else if (player.name.Contains("character-orc"))
+            {
+                zombiesVivos++;
+            }
+        }
+
+        GameManager.Instance.ZombiesVivos.Value = zombiesVivos;
+        GameManager.Instance.HumanosVivos.Value = humanosVivos;
+        Debug.Log($"Humanos vivos: {humanosVivos}, Orcos vivos: {zombiesVivos}");
+
+        if (zombiesVivos == 0)
+        {
+            Debug.Log("No quedan orcos. Los humanos ganan.");
+            endHumanWin.Value = true;
+        }
+        else if (humanosVivos == 0)
+        {
+            Debug.Log("No quedan humanos. Los orcos ganan.");
+            endZombieWin.Value = true;
+        }
+
         clientes.Value = Mathf.Max(0, clientes.Value - 1);
-        Debug.Log("Clientes conectados (no zombies): " + clientes.Value);
+        Debug.Log("Clientes conectados: " + clientes.Value);
     }
 
 
@@ -162,5 +202,38 @@ public class GameManager : NetworkBehaviour
         */
     }
 
+    public void ResetGameState()
+    {
+        Debug.Log("Reiniciando el estado del juego...");
+
+        // Reinicia todas las variables relevantes
+
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        {
+            var playerObject = client.PlayerObject;
+            if (playerObject != null)
+            {
+                var playerState = playerObject.GetComponent<PlayerState>();
+                if (playerState != null)
+                {
+                    playerState.isReady.Value = false;
+                }
+            }
+        }
+
+        endHumanWin.Value = false;
+        endZombieWin.Value = false;
+        HumanosVivos.Value = 0;
+        ZombiesVivos.Value = 0;
+        MonedasRestantes.Value = 0;
+        TiempoRestante.Value = 0;
+        currentMode.Value = GameMode.None;
+
+        NetworkManager.Singleton.SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
+
+
+
+
+    }
     #endregion
 }
