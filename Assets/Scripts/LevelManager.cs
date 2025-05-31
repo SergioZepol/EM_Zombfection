@@ -118,9 +118,10 @@ public class LevelManager : NetworkBehaviour
             humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
             zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
             CoinsGenerated = levelBuilder.GetCoinsGenerated();
+            SpawnTeams();
         }
 
-        SpawnTeams();
+        
         
         UpdateTeamUI();
     }
@@ -184,6 +185,7 @@ public class LevelManager : NetworkBehaviour
 
     public void ChangeToZombie(GameObject human, bool enabled)
     {
+        if (!IsServer) { return; }
         Debug.Log("Cambiando a Zombie");
 
         if (human != null)
@@ -194,10 +196,13 @@ public class LevelManager : NetworkBehaviour
             string uniqueID = human.GetComponent<PlayerController>().uniqueID;
 
             // Destruir el humano actual
+            var humanID = human.GetComponent<NetworkObject>().OwnerClientId;
             Destroy(human);
 
             // Instanciar el prefab del zombie en la misma posición y rotación
             GameObject zombie = Instantiate(zombiePrefab, playerPosition, playerRotation);
+            NetworkObject zombNO = zombie.GetComponent<NetworkObject>();
+            zombNO.SpawnAsPlayerObject(humanID);
             if (enabled) { zombie.tag = "Player"; }
 
             // Obtener el componente PlayerController del zombie instanciado
@@ -205,7 +210,7 @@ public class LevelManager : NetworkBehaviour
             if (playerController != null)
             {
                 playerController.enabled = enabled;
-                playerController.isZombie = true; // Cambiar el estado a zombie
+                playerController.isZombie.Value = true; // Cambiar el estado a zombie
                 playerController.uniqueID = uniqueID; // Mantener el identificador único
                 numberOfHumans--; // Reducir el número de humanos
                 numberOfZombies++; // Aumentar el número de zombis
@@ -213,27 +218,8 @@ public class LevelManager : NetworkBehaviour
 
                 if (enabled)
                 {
-                    // Obtener la referencia a la cámara principal
-                    Camera mainCamera = Camera.main;
-
-                    if (mainCamera != null)
-                    {
-                        // Obtener el script CameraController de la cámara principal
-                        CameraController cameraController = mainCamera.GetComponent<CameraController>();
-
-                        if (cameraController != null)
-                        {
-                            // Asignar el zombie al script CameraController
-                            cameraController.player = zombie.transform;
-                        }
-
-                        // Asignar el transform de la cámara al PlayerController
-                        playerController.cameraTransform = mainCamera.transform;
-                    }
-                    else
-                    {
-                        Debug.LogError("No se encontró la cámara principal.");
-                    }
+                    // Solo el dueño del objeto debe cambiar la cámara
+                    ChangeCameraToZombieClientRpc(humanID);
                 }
             }
             else
@@ -288,7 +274,7 @@ public class LevelManager : NetworkBehaviour
                 {
                     playerController.enabled = true;
                     playerController.cameraTransform = mainCamera.transform;
-                    playerController.isZombie = false; // Cambiar el estado a humano
+                    playerController.isZombie.Value = false; // Cambiar el estado a humano
                     numberOfHumans++; // Aumentar el número de humanos
                     numberOfZombies--; // Reducir el número de zombis
                 }
@@ -368,15 +354,35 @@ public class LevelManager : NetworkBehaviour
         if (humanSpawnPoints.Count <= 0) { return; }
 
         var clients = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
+        System.Random rng = new System.Random(); // Generador de números aleatorios
 
+        // Fisher-Yates Shuffle
+        for (int i = clients.Length - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+
+            // Intercambiar elementos
+            ulong temp = clients[i];
+            clients[i] = clients[j];
+            clients[j] = temp;
+        }
         for (int i = 0; i < clients.Length; i++)
         {
-            SpawnPlayer(humanSpawnPoints[i], playerPrefab, clients[i]);
+            if (i % 2 == 0)
+            {
+                SpawnPlayer(zombieSpawnPoints[i], zombiePrefab, clients[i]);
+            }
+            else
+            {
+
+                SpawnPlayer(humanSpawnPoints[i], playerPrefab, clients[i]);
+            }
         }
 
         Debug.Log($"Personaje jugable instanciado en {humanSpawnPoints[0]}");
 
-        for (int i = 1; i < numberOfHumans; i++)
+
+        /*for (int i = 1; i < numberOfHumans; i++)
         {
             if (i < humanSpawnPoints.Count)
             {
@@ -390,7 +396,7 @@ public class LevelManager : NetworkBehaviour
             {
                 SpawnNonPlayableCharacter(zombiePrefab, zombieSpawnPoints[i]);
             }
-        }
+        }*/
     }
 
     private void SpawnNonPlayableCharacter(GameObject prefab, Vector3 spawnPosition)
@@ -489,6 +495,32 @@ public class LevelManager : NetworkBehaviour
 
         // Cargar la escena del menú principal
         SceneManager.LoadScene("MenuScene"); // Cambia "MenuScene" por el nombre de tu escena principal
+    }
+
+    [ClientRpc]
+    private void ChangeCameraToZombieClientRpc(ulong clientId)
+    {
+        if (NetworkManager.Singleton.LocalClientId != clientId) return;
+
+        GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
+        if (currentPlayer == null) return;
+
+        Camera mainCamera = Camera.main;
+
+        if (mainCamera != null)
+        {
+            CameraController cameraController = mainCamera.GetComponent<CameraController>();
+            if (cameraController != null)
+            {
+                cameraController.player = currentPlayer.transform;
+            }
+
+            PlayerController playerController = currentPlayer.GetComponent<PlayerController>();
+            if (playerController != null)
+            {
+                playerController.cameraTransform = mainCamera.transform;
+            }
+        }
     }
 
     #endregion

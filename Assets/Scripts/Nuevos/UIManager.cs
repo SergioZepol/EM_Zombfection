@@ -38,6 +38,18 @@ public class UIManager : NetworkBehaviour
         DontDestroyOnLoad(this.gameObject); // Persiste entre escenas
     }
 
+    private void Update()
+    {
+        if (IsHost)
+        {
+            int minRooms = Mathf.Max(4, (int)Mathf.Pow(GameManager.Instance.clientes.Value, 2));
+            if (numberOfRooms < minRooms)
+            {
+                numberOfRooms = minRooms;
+            }
+        }
+    }
+
 
     void OnGUI()
     {

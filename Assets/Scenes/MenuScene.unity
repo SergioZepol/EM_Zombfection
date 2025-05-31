@@ -1295,13 +1295,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   joinName: Player Name...
   mostrarBox: 1
-  readyPlayersNT:
-    m_InternalValue: 0
-  ready: 0
-  gameStartedNT:
-    m_InternalValue: 0
-  endedGameNT:
-    m_InternalValue: 0
+  numberOfRooms: 4
+  roomWidth: 9
+  roomLenght: 9
+  itemsDensity: 20
+  coinsDensity: 20
   GameManager: {fileID: 1609523095}
 --- !u!114 &1883992997
 MonoBehaviour:

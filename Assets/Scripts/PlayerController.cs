@@ -15,8 +15,9 @@ public class PlayerController : NetworkBehaviour
     public int CoinsCollected = 0;
 
     [Header("Character settings")]
-    public bool isZombie = false; // Añadir una propiedad para el estado del jugador
+    public NetworkVariable<bool> isZombie = new NetworkVariable<bool>(false);    // Añadir una propiedad para el estado del jugador
     public string uniqueID; // Añadir una propiedad para el identificador único
+    bool camaraBool = false;
 
     [Header("Movement Settings")]
     public float moveSpeed = 5f;           // Velocidad de movimiento
@@ -36,12 +37,13 @@ public class PlayerController : NetworkBehaviour
     }
     void Start()
     {
-    if (IsOwner)
-    {
-        Camera.main.GetComponent<CameraController>().player = this.transform;
-    }
-    // Buscar el objeto "CanvasPlayer" en la escena
-    GameObject canvas = GameObject.Find("CanvasPlayer");
+
+        if (IsOwner)
+        {
+            Camera.main.GetComponent<CameraController>().player = this.transform;
+        }
+        // Buscar el objeto "CanvasPlayer" en la escena
+        GameObject canvas = GameObject.Find("CanvasPlayer");
 
         if (!IsOwner && canvas != null)
         {
@@ -68,18 +70,27 @@ public class PlayerController : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        if (IsOwner)
+        AssignPlayer();
+    }
+
+    private void AssignPlayer()
+    {
         {
-            // El Owner (host o cliente) establece su nombre
-            playerNameNT.Value = UIManager.Instance.GetComponent<UIManager>().joinName;
-            Debug.Log("Jugador instanciado con nombre (owner): " + playerNameNT.Value);
+            if (IsOwner)
+            {
+                // El Owner (host o cliente) establece su nombre
+                playerNameNT.Value = UIManager.Instance.GetComponent<UIManager>().joinName;
+                Debug.Log("Jugador instanciado con nombre (owner): " + playerNameNT.Value);
 
-            // Asegurar que la cámara esté asignada correctamente
-            AssignCamera();
+                
+                // Asegurar que la cámara esté asignada correctamente
+                AssignCamera();
+
+                // Todos (owner o no) actualizan visualmente el nombre en pantalla
+                
+            }
+            OnNameChanged(playerNameNT.Value, playerNameNT.Value);
         }
-
-        // Todos (owner o no) actualizan visualmente el nombre en pantalla
-        OnNameChanged(playerNameNT.Value, playerNameNT.Value);
     }
 
     private void AssignCamera()
@@ -106,8 +117,10 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    void Update()
+    void FixedUpdate()
     {
+
+
 
         if (!IsOwner) return;
 
@@ -146,7 +159,7 @@ public class PlayerController : NetworkBehaviour
         Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 720f * Time.fixedDeltaTime);
 
-        float adjustedSpeed = isZombie ? moveSpeed * zombieSpeedModifier : moveSpeed;
+        float adjustedSpeed = isZombie.Value ? moveSpeed * zombieSpeedModifier : moveSpeed;
         transform.Translate(moveDirection * adjustedSpeed * Time.fixedDeltaTime, Space.World);
 
         BroadcastTransformClientRpc(transform.position, transform.rotation);
@@ -175,7 +188,7 @@ public class PlayerController : NetworkBehaviour
             transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, 720f * Time.fixedDeltaTime);
 
             // Ajustar la velocidad si es zombie
-            float adjustedSpeed = isZombie ? moveSpeed * zombieSpeedModifier : moveSpeed;
+            float adjustedSpeed = isZombie.Value ? moveSpeed * zombieSpeedModifier : moveSpeed;
 
             // Mover al jugador en la dirección deseada
             transform.Translate(moveDirection * adjustedSpeed * Time.fixedDeltaTime, Space.World);
@@ -212,7 +225,7 @@ public class PlayerController : NetworkBehaviour
 
     public void CoinCollected()
     {
-        if (!isZombie) // Solo los humanos pueden recoger monedas
+        if (!isZombie.Value) // Solo los humanos pueden recoger monedas
         {
             this.CoinsCollected++;
             //CoinsCollected.Value++;
@@ -234,5 +247,6 @@ public class PlayerController : NetworkBehaviour
         this.GetComponentInChildren<TextMeshPro>().text = current.ToString();
         Debug.Log("Nombre después:" + this.GetComponentInChildren<TextMeshPro>().text);
     }
+
 }
 

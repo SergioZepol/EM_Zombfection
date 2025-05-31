@@ -107,10 +107,7 @@ public class LevelBuilder : MonoBehaviour
                 if (i % 2 == 0 && j % 2 == 0)
                 {
                     //cambiar
-                    humanSpawnPoints.Add(spawnPoint);// Abajo - Izquierda
-                    zombieSpawnPoints.Add(spawnPoint + new Vector3(spawnPoint.x * 2, 0, 0)); // Abajo - Derecha
-                    humanSpawnPoints.Add(spawnPoint + new Vector3(0, 0, spawnPoint.z * 2)); // Arriba - Izquierda
-                    zombieSpawnPoints.Add(spawnPoint + new Vector3(spawnPoint.x * 2, 0, spawnPoint.z * 2)); // Arriba - Derecha
+                    humanSpawnPoints.Add(spawnPoint);
                 }
                 else
                 {

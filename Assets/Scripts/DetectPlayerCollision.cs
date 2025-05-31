@@ -11,7 +11,7 @@ public class DetectPlayerCollision : MonoBehaviour
         if (other.CompareTag("Player")) // Verifica si el jugador tocó la moneda
         {
             PlayerController player = other.GetComponent<PlayerController>();
-            if (player != null && !player.isZombie) // Verifica si el jugador no es un zombie
+            if (player != null && !player.isZombie.Value) // Verifica si el jugador no es un zombie
             {
                 player.CoinCollected();
                 AudioSource.PlayClipAtPoint(pickupSound, transform.position);
