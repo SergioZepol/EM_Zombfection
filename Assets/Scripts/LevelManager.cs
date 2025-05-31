@@ -8,6 +8,7 @@ using Unity.Netcode;
 
 public enum GameMode
 {
+    None,
     Tiempo,
     Monedas
 }
@@ -22,10 +23,10 @@ public class LevelManager : NetworkBehaviour
 
     [Header("Team Settings")]
     [Tooltip("Número de jugadores humanos")]
-    [SerializeField] private int numberOfHumans = 2;
+    [SerializeField] private int numberOfHumans = 0;
 
     [Tooltip("Número de zombis")]
-    [SerializeField] private int numberOfZombies = 2;
+    [SerializeField] private int numberOfZombies = 0;
 
     [Header("Game Mode Settings")]
     [Tooltip("Selecciona el modo de juego")]
@@ -118,6 +119,7 @@ public class LevelManager : NetworkBehaviour
             humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
             zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
             CoinsGenerated = levelBuilder.GetCoinsGenerated();
+            GameManager.Instance.MonedasRestantes.Value = CoinsGenerated;
             SpawnTeams();
         }
 
@@ -128,12 +130,12 @@ public class LevelManager : NetworkBehaviour
 
     private void Update()
     {
-        if (gameMode == GameMode.Tiempo)
+        if (GameManager.Instance.currentMode.Value == GameMode.Tiempo)
         {
             // Lógica para el modo de juego basado en tiempo
             HandleTimeLimitedGameMode();
         }
-        else if (gameMode == GameMode.Monedas)
+        else if (GameManager.Instance.currentMode.Value == GameMode.Monedas)
         {
             // Lógica para el modo de juego basado en monedas
             HandleCoinBasedGameMode();
@@ -371,11 +373,13 @@ public class LevelManager : NetworkBehaviour
             if (i % 2 == 0)
             {
                 SpawnPlayer(zombieSpawnPoints[i], zombiePrefab, clients[i]);
+                numberOfZombies++; // Aumentar el número de zombis
             }
             else
             {
 
                 SpawnPlayer(humanSpawnPoints[i], playerPrefab, clients[i]);
+                numberOfHumans++; // Aumentar el número de zombis
             }
         }
 
@@ -421,11 +425,13 @@ public class LevelManager : NetworkBehaviour
         {
             humansText.text = $"{numberOfHumans}";
         }
+        GameManager.Instance.HumanosVivos.Value = numberOfHumans;
 
         if (zombiesText != null)
         {
             zombiesText.text = $"{numberOfZombies}";
         }
+        GameManager.Instance.ZombiesVivos.Value = numberOfZombies;
     }
 
     #endregion
@@ -439,6 +445,7 @@ public class LevelManager : NetworkBehaviour
 
         // Decrementar remainingSeconds basado en Time.deltaTime
         remainingSeconds -= Time.deltaTime;
+        GameManager.Instance.TiempoRestante.Value = Mathf.FloorToInt(remainingSeconds);
 
         // Comprobar si el tiempo ha llegado a cero
         if (remainingSeconds <= 0)

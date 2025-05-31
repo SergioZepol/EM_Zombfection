@@ -33,6 +33,16 @@ public class GameManager : NetworkBehaviour
     // Instancia estática del GameManager
     public static GameManager Instance { get; private set; }
 
+    public NetworkVariable<GameMode> currentMode = new NetworkVariable<GameMode>(GameMode.None, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> MonedasRestantes = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> TiempoRestante = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> ZombiesVivos = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> HumanosVivos = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
     #endregion
 
     #region Unity Callbacks

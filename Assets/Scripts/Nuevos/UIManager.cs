@@ -7,6 +7,7 @@ using Unity.Services.Relay.Models;
 using Unity.Services.Relay;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using System.Runtime.CompilerServices;
 
 public class UIManager : NetworkBehaviour
 {
@@ -16,7 +17,7 @@ public class UIManager : NetworkBehaviour
     string joinCode = "Enter room code...";
     public string joinName = "Player Name...";
     public bool mostrarBox = true;
-    public int numberOfRooms = 4;
+    public int numberOfRooms = 6;
     public int roomWidth = 9;
     public int roomLenght = 9;
     public float itemsDensity = 20;
@@ -42,7 +43,7 @@ public class UIManager : NetworkBehaviour
     {
         if (IsHost)
         {
-            int minRooms = Mathf.Max(4, (int)Mathf.Pow(GameManager.Instance.clientes.Value, 2));
+            int minRooms = Mathf.Max(6, (int)Mathf.Pow(GameManager.Instance.clientes.Value, 2));
             if (numberOfRooms < minRooms)
             {
                 numberOfRooms = minRooms;
@@ -59,7 +60,9 @@ public class UIManager : NetworkBehaviour
         float areaHeight = 300;
 
         Rect areaGUImenu = new Rect((screenWidth - areaWidth) / 2 + 50, (screenHeight - areaHeight) / 2, areaWidth, areaHeight);
-        Rect areaGUI = new Rect(10, 10, areaWidth, areaHeight);
+
+        // Ocupa toda la pantalla con márgenes si quieres
+        Rect areaGUI = new Rect(10, 10, screenWidth, screenHeight);
 
         // Puedes usar esto si quieres controlar cuándo se muestra el box (igual que en el segundo código)
         bool mostrarBox = !NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer;
@@ -94,6 +97,7 @@ public class UIManager : NetworkBehaviour
                 enabled = true;
             }
             */
+            GameHUD();
             StatusLabels();
         }
 
@@ -169,30 +173,80 @@ public class UIManager : NetworkBehaviour
         var localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject?.GetComponent<PlayerState>();
         if (localPlayer == null) return;
 
-        if (GUILayout.Button(localPlayer.isReady.Value ? "Not Ready" : "Ready", GUILayout.Width(200)))
+        if (IsServer || IsHost)
         {
-            // Llama al ServerRpc para cambiar el estado
-            localPlayer.SetReadyServerRpc(!localPlayer.isReady.Value);
+            if (GUILayout.Button("Tiempo", GUILayout.Width(200)))
+            {
+                GameManager.Instance.currentMode.Value = GameMode.Tiempo;
+            }
+
+            if (GUILayout.Button("Monedas", GUILayout.Width(200)))
+            {
+                GameManager.Instance.currentMode.Value = GameMode.Monedas;
+            }
+            // Solo muestra el botón "Ready" si ya se ha elegido un modo de juego
+            if (GameManager.Instance.currentMode.Value == GameMode.Tiempo || GameManager.Instance.currentMode.Value == GameMode.Monedas)
+            {
+                if (GUILayout.Button(localPlayer.isReady.Value ? "Not Ready" : "Ready", GUILayout.Width(200)))
+                {
+                    // Llama al ServerRpc para cambiar el estado
+                    localPlayer.SetReadyServerRpc(!localPlayer.isReady.Value);
+                }
+            }
+        }
+        else
+        {
+            if (GUILayout.Button(localPlayer.isReady.Value ? "Not Ready" : "Ready", GUILayout.Width(200)))
+            {
+                // Llama al ServerRpc para cambiar el estado
+                localPlayer.SetReadyServerRpc(!localPlayer.isReady.Value);
+            }
         }
 
         if (IsHost || IsServer)
         {
             // Sliders para enteros
-            GUILayout.Label("Number of Rooms: " + numberOfRooms);
-            numberOfRooms = (int)GUILayout.HorizontalSlider(numberOfRooms, 4, 50);
+            GUILayout.Label("Number of Rooms: " + numberOfRooms, GUILayout.Width(300));
+            numberOfRooms = (int)GUILayout.HorizontalSlider(numberOfRooms, 6, 50, GUILayout.Width(300));
 
-            GUILayout.Label("Room Width: " + roomWidth);
-            roomWidth = (int)GUILayout.HorizontalSlider(roomWidth, 5, 20);
+            GUILayout.Label("Room Width: " + roomWidth, GUILayout.Width(300));
+            roomWidth = (int)GUILayout.HorizontalSlider(roomWidth, 5, 20, GUILayout.Width(300));
 
-            GUILayout.Label("Room Length: " + roomLenght);
-            roomLenght = (int)GUILayout.HorizontalSlider(roomLenght, 5, 20);
+            GUILayout.Label("Room Length: " + roomLenght, GUILayout.Width(300));
+            roomLenght = (int)GUILayout.HorizontalSlider(roomLenght, 5, 20, GUILayout.Width(300));
 
-            // Sliders para floats
-            GUILayout.Label("Items Density: " + itemsDensity.ToString("F1"));
-            itemsDensity = GUILayout.HorizontalSlider(itemsDensity, 5f, 30f);
+            GUILayout.Label("Items Density: " + itemsDensity.ToString("F1"), GUILayout.Width(300));
+            itemsDensity = GUILayout.HorizontalSlider(itemsDensity, 5f, 30f, GUILayout.Width(300));
 
-            GUILayout.Label("Coins Density: " + coinsDensity.ToString("F1"));
-            coinsDensity = GUILayout.HorizontalSlider(coinsDensity, 5f, 30f);
+            GUILayout.Label("Coins Density: " + coinsDensity.ToString("F1"), GUILayout.Width(300));
+            coinsDensity = GUILayout.HorizontalSlider(coinsDensity, 5f, 30f, GUILayout.Width(300));
         }
     }
+
+    private void GameHUD()
+    {
+        if (GameManager == null)
+            return;
+
+        GUILayout.BeginHorizontal();
+
+        // Mostrar solo la info del modo activo
+        var mode = GameManager.Instance.currentMode.Value;
+
+        if (mode == GameMode.Tiempo)
+        {
+            GUILayout.Label($"Tiempo restante: <{GameManager.Instance.TiempoRestante.Value.ToString("D2")}>", GUILayout.Width(200));
+        }
+
+        if (mode == GameMode.Monedas)
+        {
+            GUILayout.Label($"Monedas recogidas: <{GameManager.Instance.MonedasRestantes.Value.ToString("D2")}>", GUILayout.Width(200));
+        }
+
+        GUILayout.Label($"Zombis: <{GameManager.Instance.ZombiesVivos.Value.ToString("D2")}>", GUILayout.Width(100));
+        GUILayout.Label($"Humanos: <{GameManager.Instance.HumanosVivos.Value.ToString("D2")}>", GUILayout.Width(100));
+
+        GUILayout.EndHorizontal();
+    }
+
 }
