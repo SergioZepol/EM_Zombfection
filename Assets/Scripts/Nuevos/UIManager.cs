@@ -28,6 +28,7 @@ public class UIManager : NetworkBehaviour
 
     public static UIManager Instance { get; private set; }
 
+    //verifica una unica existencia de UIManager
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -53,8 +54,6 @@ public class UIManager : NetworkBehaviour
 
 
     }
-
-
     void OnGUI()
     {
         float screenWidth = Screen.width;
@@ -64,20 +63,20 @@ public class UIManager : NetworkBehaviour
 
         Rect areaGUImenu = new Rect((screenWidth - areaWidth) / 2 + 50, (screenHeight - areaHeight) / 2, areaWidth, areaHeight);
 
-        // Ocupa toda la pantalla con márgenes si quieres
+        // Ocupa toda la pantalla con mï¿½rgenes si quieres
         Rect areaGUI = new Rect(10, 10, screenWidth, screenHeight);
 
-        // Puedes usar esto si quieres controlar cuándo se muestra el box (igual que en el segundo código)
+        // Puedes usar esto si quieres controlar cuï¿½ndo se muestra el box (igual que en el segundo cï¿½digo)
         bool mostrarBox = !NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer;
         bool enabled = false;
 
         if (mostrarBox)
         {
-            GUI.Box(areaGUImenu, "Menú");
+            GUI.Box(areaGUImenu, "Menï¿½");
         }
 
         GUILayout.BeginArea(mostrarBox ? areaGUImenu : areaGUI);
-        GUILayout.Space(mostrarBox ? 40 : 0); // Añade espacio si es el menú
+        GUILayout.Space(mostrarBox ? 40 : 0); // Aï¿½ade espacio si es el menï¿½
         if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
         {
             StartButtons();
@@ -113,7 +112,7 @@ public class UIManager : NetworkBehaviour
         if (GUILayout.Button("Host") && joinName.Length < 30) StartHost();
         if (GUILayout.Button("Client") && joinName.Length < 30) StartClient();
 
-        // Campos de texto para código y nombre
+        // Campos de texto para cï¿½digo y nombre
         joinCode = GUILayout.TextField(joinCode);
         joinName = GUILayout.TextField(joinName);
 
@@ -131,6 +130,7 @@ public class UIManager : NetworkBehaviour
             await AuthenticationService.Instance.SignInAnonymouslyAsync();
         }
 
+        //Relay
         Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
         NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(new RelayServerData(allocation, "dtls"));
         joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
@@ -161,6 +161,39 @@ public class UIManager : NetworkBehaviour
         NetworkManager.Singleton.StartClient();
     }
 
+    /*
+        private async void StartClient()
+{
+    // Verificar si se ingresÃ³ un cÃ³digo
+    if (string.IsNullOrEmpty(joinCodeInputField.text))
+    {
+        Debug.LogError("Por favor ingresa un cÃ³digo de uniÃ³n");
+        return;
+    }
+
+    try {
+        await UnityServices.InitializeAsync();
+        if (!AuthenticationService.Instance.IsSignedIn)
+        {
+            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+        }
+
+        var joinAllocation = await RelayService.Instance.JoinAllocationAsync(
+            joinCode: joinCodeInputField.text);
+            
+        NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(
+            new RelayServerData(joinAllocation, "dtls"));
+            
+        NetworkManager.Singleton.StartClient();
+    }
+    catch (Exception e) {
+        Debug.LogError($"Error al conectar: {e.Message}");
+        // AquÃ­ podrÃ­as mostrar un mensaje en pantalla al jugador
+    }
+}
+    */
+    
+    //muestra el estado
     void StatusLabels()
     {
         var mode = NetworkManager.Singleton.IsHost ?
@@ -187,7 +220,7 @@ public class UIManager : NetworkBehaviour
             {
                 GameManager.Instance.currentMode.Value = GameMode.Monedas;
             }
-            // Solo muestra el botón "Ready" si ya se ha elegido un modo de juego
+            // Solo muestra el botï¿½n "Ready" si ya se ha elegido un modo de juego
             if (GameManager.Instance.currentMode.Value == GameMode.Tiempo || GameManager.Instance.currentMode.Value == GameMode.Monedas)
             {
                 if (GUILayout.Button(localPlayer.isReady.Value ? "Not Ready" : "Ready", GUILayout.Width(200)))
@@ -259,7 +292,7 @@ public class UIManager : NetworkBehaviour
             GUILayout.Label("LOS HUMANOS HAN GANADO");
             if (IsHost)
             {
-                if (GUILayout.Button("Volver al Menú", GUILayout.Width(200)))
+                if (GUILayout.Button("Volver al Menï¿½", GUILayout.Width(200)))
                 {
                     GameManager.Instance.ResetGameState();
                 }
@@ -271,7 +304,7 @@ public class UIManager : NetworkBehaviour
             GUILayout.Label("LOS ZOMBIES HAN GANADO");
             if (IsHost)
             {
-                if (GUILayout.Button("Volver al Menú", GUILayout.Width(200)))
+                if (GUILayout.Button("Volver al Menï¿½", GUILayout.Width(200)))
                 {
                     GameManager.Instance.ResetGameState();
                 }
