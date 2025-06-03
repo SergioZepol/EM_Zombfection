@@ -6,9 +6,9 @@ public class ZombieCollisionHandler : MonoBehaviour
     {
         PlayerController playerController = collision.gameObject.GetComponent<PlayerController>();
         Debug.Log("Colisión detectada con " + collision.gameObject.name);
-        if (playerController != null && !playerController.isZombie)
+        if (playerController != null && !playerController.isZombie.Value)
         {
-            playerController.isZombie = true;
+            playerController.isZombie.Value = true;
             Debug.Log("PlayerController encontrado: " + playerController.uniqueID);
 
             // Obtener el prefab de humano desde el LevelManager

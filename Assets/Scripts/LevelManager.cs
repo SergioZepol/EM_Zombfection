@@ -4,14 +4,16 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Unity.Netcode;
 
 public enum GameMode
 {
+    None,
     Tiempo,
     Monedas
 }
 
-public class LevelManager : MonoBehaviour
+public class LevelManager : NetworkBehaviour
 {
     #region Properties
 
@@ -21,10 +23,10 @@ public class LevelManager : MonoBehaviour
 
     [Header("Team Settings")]
     [Tooltip("Número de jugadores humanos")]
-    [SerializeField] private int numberOfHumans = 2;
+    [SerializeField] private int numberOfHumans = 0;
 
     [Tooltip("Número de zombis")]
-    [SerializeField] private int numberOfZombies = 2;
+    [SerializeField] private int numberOfZombies = 0;
 
     [Header("Game Mode Settings")]
     [Tooltip("Selecciona el modo de juego")]
@@ -42,6 +44,7 @@ public class LevelManager : MonoBehaviour
     private TextMeshProUGUI gameModeText;
 
     private int CoinsGenerated = 0;
+
 
     public string PlayerPrefabName => playerPrefab.name;
     public string ZombiePrefabName => zombiePrefab.name;
@@ -111,27 +114,29 @@ public class LevelManager : MonoBehaviour
         remainingSeconds = minutes * 60;
 
         // Obtener los puntos de aparición y el número de monedas generadas desde LevelBuilder
-        if (levelBuilder != null)
+        if (levelBuilder != null && (IsServer || IsHost))
         {
             levelBuilder.Build();
             humanSpawnPoints = levelBuilder.GetHumanSpawnPoints();
             zombieSpawnPoints = levelBuilder.GetZombieSpawnPoints();
             CoinsGenerated = levelBuilder.GetCoinsGenerated();
+            GameManager.Instance.MonedasRestantes.Value = CoinsGenerated;
+            SpawnTeams();
         }
 
-        SpawnTeams();
+        
         
         UpdateTeamUI();
     }
 
     private void Update()
     {
-        if (gameMode == GameMode.Tiempo)
+        if (GameManager.Instance.currentMode.Value == GameMode.Tiempo)
         {
             // Lógica para el modo de juego basado en tiempo
             HandleTimeLimitedGameMode();
         }
-        else if (gameMode == GameMode.Monedas)
+        else if (GameManager.Instance.currentMode.Value == GameMode.Monedas)
         {
             // Lógica para el modo de juego basado en monedas
             HandleCoinBasedGameMode();
@@ -164,11 +169,6 @@ public class LevelManager : MonoBehaviour
             }
         }
         UpdateTeamUI();
-
-        if (isGameOver)
-        {
-            ShowGameOverPanel();
-        }
     }
 
     #endregion
@@ -183,6 +183,7 @@ public class LevelManager : MonoBehaviour
 
     public void ChangeToZombie(GameObject human, bool enabled)
     {
+        if (!IsServer) { return; }
         Debug.Log("Cambiando a Zombie");
 
         if (human != null)
@@ -193,10 +194,13 @@ public class LevelManager : MonoBehaviour
             string uniqueID = human.GetComponent<PlayerController>().uniqueID;
 
             // Destruir el humano actual
+            var humanID = human.GetComponent<NetworkObject>().OwnerClientId;
             Destroy(human);
 
             // Instanciar el prefab del zombie en la misma posición y rotación
             GameObject zombie = Instantiate(zombiePrefab, playerPosition, playerRotation);
+            NetworkObject zombNO = zombie.GetComponent<NetworkObject>();
+            zombNO.SpawnAsPlayerObject(humanID);
             if (enabled) { zombie.tag = "Player"; }
 
             // Obtener el componente PlayerController del zombie instanciado
@@ -204,35 +208,20 @@ public class LevelManager : MonoBehaviour
             if (playerController != null)
             {
                 playerController.enabled = enabled;
-                playerController.isZombie = true; // Cambiar el estado a zombie
+                playerController.isZombie.Value = true; // Cambiar el estado a zombie
                 playerController.uniqueID = uniqueID; // Mantener el identificador único
-                numberOfHumans--; // Reducir el número de humanos
-                numberOfZombies++; // Aumentar el número de zombis
+                GameManager.Instance.HumanosVivos.Value--; // Reducir el número de humanos
+                GameManager.Instance.ZombiesVivos.Value++; // Aumentar el número de zombis
+                if(GameManager.Instance.HumanosVivos.Value == 0 && !GameManager.Instance.endHumanWin.Value)
+                {
+                    GameManager.Instance.endZombieWin.Value = true;
+                }
                 UpdateTeamUI();
 
                 if (enabled)
                 {
-                    // Obtener la referencia a la cámara principal
-                    Camera mainCamera = Camera.main;
-
-                    if (mainCamera != null)
-                    {
-                        // Obtener el script CameraController de la cámara principal
-                        CameraController cameraController = mainCamera.GetComponent<CameraController>();
-
-                        if (cameraController != null)
-                        {
-                            // Asignar el zombie al script CameraController
-                            cameraController.player = zombie.transform;
-                        }
-
-                        // Asignar el transform de la cámara al PlayerController
-                        playerController.cameraTransform = mainCamera.transform;
-                    }
-                    else
-                    {
-                        Debug.LogError("No se encontró la cámara principal.");
-                    }
+                    // Solo el dueño del objeto debe cambiar la cámara
+                    ChangeCameraToZombieClientRpc(humanID);
                 }
             }
             else
@@ -287,9 +276,9 @@ public class LevelManager : MonoBehaviour
                 {
                     playerController.enabled = true;
                     playerController.cameraTransform = mainCamera.transform;
-                    playerController.isZombie = false; // Cambiar el estado a humano
-                    numberOfHumans++; // Aumentar el número de humanos
-                    numberOfZombies--; // Reducir el número de zombis
+                    playerController.isZombie.Value = false; // Cambiar el estado a humano
+                    GameManager.Instance.HumanosVivos.Value++; ; // Aumentar el número de humanos
+                    GameManager.Instance.ZombiesVivos.Value--; // Reducir el número de zombis
                 }
                 else
                 {
@@ -307,7 +296,7 @@ public class LevelManager : MonoBehaviour
         }
     }
 
-    private void SpawnPlayer(Vector3 spawnPosition, GameObject prefab)
+    private void SpawnPlayer(Vector3 spawnPosition, GameObject prefab, ulong clientId)
     {
         Debug.Log($"Instanciando jugador en {spawnPosition}");
         if (prefab != null)
@@ -315,6 +304,8 @@ public class LevelManager : MonoBehaviour
             Debug.Log($"Instanciando jugador en {spawnPosition}");
             // Crear una instancia del prefab en el punto especificado
             GameObject player = Instantiate(prefab, spawnPosition, Quaternion.identity);
+            NetworkObject playerNetworkObject = player.GetComponent<NetworkObject>();
+            playerNetworkObject.SpawnAsPlayerObject(clientId);
             player.tag = "Player";
 
             // Obtener la referencia a la cámara principal
@@ -342,7 +333,17 @@ public class LevelManager : MonoBehaviour
                     playerController.enabled = true;
                     playerController.cameraTransform = mainCamera.transform;
                     playerController.uniqueID = uniqueIdGenerator.GenerateUniqueID(); // Generar un identificador único
-
+                    if (IsOwner) // Esto asegura que solo el dueño lo configure (opcional)
+                    {
+                        if (prefab.name.Contains("character-orc"))
+                        {
+                            playerController.isZombie.Value = true;
+                        }
+                        else
+                        {
+                            playerController.isZombie.Value = false;
+                        }
+                    }
                 }
                 else
                 {
@@ -359,15 +360,43 @@ public class LevelManager : MonoBehaviour
             Debug.LogError("Faltan referencias al prefab o al punto de aparición.");
         }
     }
-
     private void SpawnTeams()
     {
         Debug.Log("Instanciando equipos");
         if (humanSpawnPoints.Count <= 0) { return; }
-        SpawnPlayer(humanSpawnPoints[0], playerPrefab);
+
+        var clients = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
+        System.Random rng = new System.Random(); // Generador de números aleatorios
+
+        // Fisher-Yates Shuffle
+        for (int i = clients.Length - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+
+            // Intercambiar elementos
+            ulong temp = clients[i];
+            clients[i] = clients[j];
+            clients[j] = temp;
+        }
+        for (int i = 0; i < clients.Length; i++)
+        {
+            if (i % 2 == 0)
+            {
+                SpawnPlayer(zombieSpawnPoints[i], zombiePrefab, clients[i]);
+                GameManager.Instance.ZombiesVivos.Value++; // Aumentar el número de zombis
+            }
+            else
+            {
+
+                SpawnPlayer(humanSpawnPoints[i], playerPrefab, clients[i]);
+                GameManager.Instance.HumanosVivos.Value++; // Aumentar el número de humanos
+            }
+        }
+
         Debug.Log($"Personaje jugable instanciado en {humanSpawnPoints[0]}");
 
-        for (int i = 1; i < numberOfHumans; i++)
+
+        /*for (int i = 1; i < numberOfHumans; i++)
         {
             if (i < humanSpawnPoints.Count)
             {
@@ -381,7 +410,7 @@ public class LevelManager : MonoBehaviour
             {
                 SpawnNonPlayableCharacter(zombiePrefab, zombieSpawnPoints[i]);
             }
-        }
+        }*/
     }
 
     private void SpawnNonPlayableCharacter(GameObject prefab, Vector3 spawnPosition)
@@ -406,11 +435,13 @@ public class LevelManager : MonoBehaviour
         {
             humansText.text = $"{numberOfHumans}";
         }
+        //GameManager.Instance.HumanosVivos.Value = numberOfHumans;
 
         if (zombiesText != null)
         {
             zombiesText.text = $"{numberOfZombies}";
         }
+        //GameManager.Instance.ZombiesVivos.Value = numberOfZombies;
     }
 
     #endregion
@@ -424,11 +455,12 @@ public class LevelManager : MonoBehaviour
 
         // Decrementar remainingSeconds basado en Time.deltaTime
         remainingSeconds -= Time.deltaTime;
+        GameManager.Instance.TiempoRestante.Value = Mathf.FloorToInt(remainingSeconds);
 
         // Comprobar si el tiempo ha llegado a cero
-        if (remainingSeconds <= 0)
+        if (remainingSeconds <= 0 && !GameManager.Instance.endZombieWin.Value)
         {
-            isGameOver = true;
+            GameManager.Instance.endHumanWin.Value = true;
             remainingSeconds = 0;
         }
 
@@ -448,13 +480,15 @@ public class LevelManager : MonoBehaviour
     {
         if (isGameOver) return;
 
+        
         // Implementar la lógica para el modo de juego basado en monedas
         if (gameModeText != null && playerController != null)
         {
             gameModeText.text = $"{playerController.CoinsCollected}/{CoinsGenerated}";
-            if (playerController.CoinsCollected == CoinsGenerated)
+            if (GameManager.Instance.MonedasRestantes.Value == 0 && !GameManager.Instance.endZombieWin.Value)
             {
-                isGameOver = true;
+                GameManager.Instance.endHumanWin.Value = true;
+
             }
         }
     }
@@ -482,10 +516,36 @@ public class LevelManager : MonoBehaviour
         SceneManager.LoadScene("MenuScene"); // Cambia "MenuScene" por el nombre de tu escena principal
     }
 
+    [ClientRpc]
+    private void ChangeCameraToZombieClientRpc(ulong clientId)
+    {
+        if (NetworkManager.Singleton.LocalClientId != clientId) return;
+
+        GameObject currentPlayer = GameObject.FindGameObjectWithTag("Player");
+        if (currentPlayer == null) return;
+
+        Camera mainCamera = Camera.main;
+
+        if (mainCamera != null)
+        {
+            CameraController cameraController = mainCamera.GetComponent<CameraController>();
+            if (cameraController != null)
+            {
+                cameraController.player = currentPlayer.transform;
+            }
+
+            PlayerController playerController = currentPlayer.GetComponent<PlayerController>();
+            if (playerController != null)
+            {
+                playerController.cameraTransform = mainCamera.transform;
+            }
+        }
+    }
+
+
+    private void EndGame()
+    {
+    }
     #endregion
 
 }
-
-
-
-

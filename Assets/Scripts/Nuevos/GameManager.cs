@@ -1,5 +1,9 @@
-using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.Playables;
+using UnityEngine.SceneManagement;
 //using Cinemachine;
 
 public class GameManager : NetworkBehaviour
@@ -9,24 +13,28 @@ public class GameManager : NetworkBehaviour
     // Referencia al NetworkManager
     public NetworkManager _networkManager;
 
-    // Prefabricado del coche
-    GameObject _human;
+    // Prefabricado del personaje
+    [SerializeField] private GameObject _human;
+    //private int nextSpawnIndex = 0;
 
     // Contador de clientes conectados
     public NetworkVariable<int> clientes = new NetworkVariable<int>();
+    public NetworkVariable<bool> endHumanWin = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+    public NetworkVariable<bool> endZombieWin = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
-    // Posiciones de inicio/spawn de los jugadores en la pista
-    GameObject startPos;
-    GameObject startPos1;
-    GameObject startPos2;
-    GameObject startPos3;
-    GameObject startPos4;
-
-    // Número máximo de jugadores permitidos
-    public int numPlayers = 4;
 
     // Instancia estática del GameManager
     public static GameManager Instance { get; private set; }
+
+    public NetworkVariable<GameMode> currentMode = new NetworkVariable<GameMode>(GameMode.None, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> MonedasRestantes = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> TiempoRestante = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> ZombiesVivos = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+    public NetworkVariable<int> HumanosVivos = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
     #endregion
 
@@ -34,9 +42,6 @@ public class GameManager : NetworkBehaviour
 
     void Start()
     {
-        // Cacheo del NetworkManager
-        //_networkManager = NetworkManager.Singleton;
-
         // El humano va a ser de entre la lista de prefabs al jugador
         _human = _networkManager.NetworkConfig.Prefabs.Prefabs[0].Prefab;
 
@@ -83,77 +88,98 @@ public class GameManager : NetworkBehaviour
             clientes.Value += 1;
             Debug.Log("Clientes conectados: " + clientes.Value);
 
-            // Spawn del jugador
+            //Spawn del jugador
             var playerObject = Instantiate(_human);
             NetworkObject networkObject = playerObject.GetComponent<NetworkObject>();
             networkObject.SpawnAsPlayerObject(obj);
-
-            /*
-            Player player = playerObject.GetComponent<Player>();
-            player.ID = obj;
-            */
         }
     }
 
     // Evento cuando un cliente se ha desconectado
-    private void onClientDisconnect(ulong obj)
+    private void onClientDisconnect(ulong clientId)
     {
-        // Solo durante la partida, si alguien se desconecta, el servidor determina que se ha ido y se encarga de modificar las variables
-        if (_networkManager.IsServer)
+        StartCoroutine(HandleDisconnect());
+    }
+
+    private IEnumerator HandleDisconnect()
+    {
+        // Espera un frame (puedes aumentar a 0.1f si sigue fallando)
+        yield return null;
+
+        var allPlayers = GameObject.FindGameObjectsWithTag("Player");
+
+        int humanosVivos = 0;
+        int zombiesVivos = 0;
+
+        foreach (var player in allPlayers)
         {
-            clientes.Value -= 1;
-            Debug.Log("Clientes conectados: " + clientes.Value);
-            /*
-            if (raceStartedNT.Value)
-            { // Si solo queda un jugador, fin de la partida
-                if (clientes.Value == 1)
-                {
-                    EndGame();
-                }
+            if (player.name.Contains("character-human"))
+            {
+                humanosVivos++;
             }
-            */
+            else if (player.name.Contains("character-orc"))
+            {
+                zombiesVivos++;
+            }
         }
-    }
 
-    public override void OnNetworkSpawn()
-    {
-        if (!IsServer && IsOwner) 
+        GameManager.Instance.ZombiesVivos.Value = zombiesVivos;
+        GameManager.Instance.HumanosVivos.Value = humanosVivos;
+        Debug.Log($"Humanos vivos: {humanosVivos}, Orcos vivos: {zombiesVivos}");
+
+        if (zombiesVivos == 0)
         {
-            TestServerRpc(0, NetworkObjectId);
+            Debug.Log("No quedan orcos. Los humanos ganan.");
+            endHumanWin.Value = true;
         }
-    }
-
-    [Rpc(SendTo.ClientsAndHost)]
-    void TestClientRpc(int value, ulong sourceNetworkObjectId)
-    {
-        Debug.Log($"El cliente recibe el RPC #{value} en NetworkObject #{sourceNetworkObjectId}");
-        if (IsOwner) 
+        else if (humanosVivos == 0)
         {
-            TestServerRpc(value + 1, sourceNetworkObjectId);
+            Debug.Log("No quedan humanos. Los orcos ganan.");
+            endZombieWin.Value = true;
         }
-    }
 
-    [Rpc(SendTo.Server)]
-    void TestServerRpc(int value, ulong sourceNetworkObjectId)
-    {
-        Debug.Log($"El server recibe el RPC #{value} en NetworkObject #{sourceNetworkObjectId}");
-        TestClientRpc(value, sourceNetworkObjectId);
+        clientes.Value = Mathf.Max(0, clientes.Value - 1);
+        Debug.Log("Clientes conectados: " + clientes.Value);
     }
-
 
 
     #endregion
 
     #region Métodos Públicos
 
-    // Comprueba si el número de jugadores listos es igual al número total de clientes conectados
-    public bool EqualsReadyConnected(int ready)
+    public void CheckAllReady()
     {
-        if (clientes.Value <= 1)
+        if (!IsServer) return;
+
+        if (NetworkManager.Singleton.ConnectedClientsList.Count < 2) return;
+
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
         {
-            return false;
+            var player = client.PlayerObject.GetComponent<PlayerState>();
+            if (player == null || !player.isReady.Value)
+                return; // Al menos uno no está listo
         }
-        return ready == clientes.Value;
+
+        // Todos están listos, cambiamos de escena
+
+        StartCoroutine(DespawnAndLoadScene());
+    }
+
+    private IEnumerator DespawnAndLoadScene()
+    {
+        var allPlayers = GameObject.FindGameObjectsWithTag("Player");
+        foreach (var player in allPlayers)
+        {
+            if (player.TryGetComponent<NetworkObject>(out var netObj))
+            {
+                netObj.Despawn();
+            }
+        }
+
+        // Esperar 1 frame (mínimo)
+        yield return null;
+
+        NetworkManager.Singleton.SceneManager.LoadScene("GameScene", LoadSceneMode.Single);
     }
 
     // Devuelve el número de clientes conectados
@@ -172,9 +198,42 @@ public class GameManager : NetworkBehaviour
     {
         Debug.Log("Fin de Partida: Un jugador restante");
         /*
-        RaceEnded();
+        GameEnded();
         */
     }
 
+    public void ResetGameState()
+    {
+        Debug.Log("Reiniciando el estado del juego...");
+
+        // Reinicia todas las variables relevantes
+
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        {
+            var playerObject = client.PlayerObject;
+            if (playerObject != null)
+            {
+                var playerState = playerObject.GetComponent<PlayerState>();
+                if (playerState != null)
+                {
+                    playerState.isReady.Value = false;
+                }
+            }
+        }
+
+        endHumanWin.Value = false;
+        endZombieWin.Value = false;
+        HumanosVivos.Value = 0;
+        ZombiesVivos.Value = 0;
+        MonedasRestantes.Value = 0;
+        TiempoRestante.Value = 0;
+        currentMode.Value = GameMode.None;
+
+        NetworkManager.Singleton.SceneManager.LoadScene("MenuScene", LoadSceneMode.Single);
+
+
+
+
+    }
     #endregion
 }
